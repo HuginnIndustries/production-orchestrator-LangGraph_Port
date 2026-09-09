@@ -4,16 +4,23 @@ Generated Sep 8, 2026. All screen material for shots A–F + X is captured; shot
 is scripted and verified. Waiting on: narration audio (Breeze-TTS-2 clips from
 mimir, due Sep 9 midday) and final voice selection.
 
-## Captured footage (1920×1080, ~30fps, MP4)
+## Captured footage (v2, September 9 — supersedes the v1 table)
 
-| File | Shot | Content | Duration target |
+| File | Shot | Content | Narration |
 |---|---|---|---|
-| `/tmp/po-captures/shot-X-chips.mp4` | X (insert) | scenario chips: rush order / team jerseys / metallic monogram | 5s |
-| `/tmp/po-captures/shot-B-intake.mp4` | B (0:22–0:55) | intake email card → feed rows as agent extracts + validates | 33s |
-| `/tmp/po-captures/shot-C-board.mp4` | C (0:55–1:45) | feed filling: orders/inventory/capacity/blockers/plan/drafts + production board conflict | 50s |
-| `/tmp/po-captures/shot-D-interrupt.mp4` | D (1:45–2:15) | interrupt row + Technical proof expansion (proposal hash) | 30s |
-| `/tmp/po-captures/shot-E-reject.mp4` | E (2:15–2:40) | Keep current schedule → board unchanged, zero plans applied | 25s |
-| `/tmp/po-captures/shot-F-approve.mp4` | F (2:40–3:05) | Approve coordinated plan → board animates, applied exactly once | 25s |
+| `/tmp/po-captures-4k/shot-B-intake.webm` (33.3s) | B (15.5–47.0s) | intake card + feed, one continuous run | 31.6s |
+| `/tmp/po-captures-4k/shot-C-board.webm` (29.4s) | C (47.0–74.7s) | board + feed, continuous | 27.7s |
+| `/tmp/po-captures-4k/shot-D-interrupt.webm` (21.0s) | D (74.7–94.2s) | technical proof expanded, hash visible | 19.4s |
+| `/tmp/po-captures-4k/shot-E-reject.webm` (11.9s) | E (94.2–104.6s) | reject: zero plans applied | 10.5s |
+| `/tmp/po-captures-4k/shot-F-approve.webm` (11.9s) | F (104.6–115.0s) | approve: applied exactly once | 10.4s |
+| generated cards (A/G/H) | A (0–15.5s), G (115.0–149.4s), H (149.4–167.3s) | 4K text cards, **narrated** | 15.5 / 34.4 / 17.9s |
+
+All sources 3840×2160 (device_scale_factor=2), assembled to 1920×1080 via
+Lanczos + unsharp at 14 Mbps. **Final video:**
+`~/Documents/Github/notes/submission-assets/submission-video.mp4` (167.4s ≈ 2:47,
+11.2 MB) with per-segment files under `segments/`. Build tooling committed at
+`0b220e6`: `scripts/capture/capture-demo-shots.py` +
+`scripts/capture/assemble_submission_video.py`.
 
 ## Shot A (slate) and shot H (architecture close)
 
