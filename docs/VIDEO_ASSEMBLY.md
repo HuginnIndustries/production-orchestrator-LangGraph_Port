@@ -76,6 +76,14 @@ are insufficient:
    filter chain per output, and card strings are passed through `textfile` with
    expansion disabled rather than fragile inline quoting.
 
+3. The original E/F selectors matched explanatory text before the real controls,
+   so both recordings remained in the pending revision-1 state. Capture now
+   targets `button[data-decision="reject"]` and
+   `button[data-decision="approve"]`, then fails unless the corresponding
+   outcome card appears. D likewise fails unless the technical panel is open
+   and its exact-hash element exists; the panel is anchored to the viewport so
+   that evidence is actually recorded.
+
 `scripts/capture/verify_submission_video.py` decodes real frames and fails if:
 
 - A, G, or H lacks visible card text;
@@ -88,4 +96,6 @@ are insufficient:
 - Keep numbers consistent across the video, Devpost copy, and builder.aws posts.
 - Confirm no account IDs, ARNs, AWS profile names, credentials, or private paths
   appear in any frame.
+- Extract one frame per shot directly from the concatenated MP4—not only from
+  source segments—and compare A–H against `docs/VIDEO_SCRIPT.md` before upload.
 - Upload to YouTube, then verify public logged-out playback at 1080p with audio.

@@ -63,7 +63,12 @@ with sync_playwright() as p:
 
     def shot_d(pg):
         wait_rendered(pg)
-        pg.click("text=Technical proof", timeout=5000)
+        summary = pg.locator("details.technical > summary")
+        summary.click(timeout=5000)
+        pg.wait_for_selector("details.technical[open] .hash-lead", timeout=5000)
+        pg.locator("details.technical").evaluate(
+            "element => element.scrollIntoView({block: 'start'})"
+        )
         pg.wait_for_timeout(4000)
         pg.wait_for_timeout(14000)
 
@@ -71,14 +76,18 @@ with sync_playwright() as p:
 
     def shot_e(pg):
         wait_rendered(pg)
-        pg.click("text=Keep current schedule", timeout=5000)
+        pg.locator('button[data-decision="reject"]').click(timeout=5000)
+        pg.wait_for_selector(".outcome-card:has-text('Zero plans applied')", timeout=30000)
+        pg.locator(".outcome-card").evaluate("element => element.scrollIntoView({block: 'start'})")
         pg.wait_for_timeout(9000)
 
     record(browser, "E-reject", shot_e)
 
     def shot_f(pg):
         wait_rendered(pg)
-        pg.click("text=Approve coordinated plan", timeout=5000)
+        pg.locator('button[data-decision="approve"]').click(timeout=5000)
+        pg.wait_for_selector(".outcome-card:has-text('applied once')", timeout=30000)
+        pg.locator(".outcome-card").evaluate("element => element.scrollIntoView({block: 'start'})")
         pg.wait_for_timeout(9000)
 
     record(browser, "F-approve", shot_f)
