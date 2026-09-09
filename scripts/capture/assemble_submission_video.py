@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Assemble the submission video: 4K sources -> 1080p, narrated cards, no loops."""
-import subprocess, os
+import subprocess
 from pathlib import Path
 
 OUT = Path("/tmp/po-video-final-v2"); OUT.mkdir(exist_ok=True)
@@ -13,7 +13,7 @@ DUR = {"A": 15.456, "B": 31.584, "C": 27.696, "D": 19.416,
 
 def run(cmd):
     cmd = [str(c) for c in cmd]
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if p.returncode != 0:
         raise SystemExit(f"FAILED: {' '.join(cmd[:8])}\n{p.stderr[-1200:]}")
 
@@ -109,5 +109,5 @@ run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
      str(OUT / "submission-video.mp4")])
 p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration,size",
                     "-of", "csv=p=0", str(OUT / "submission-video.mp4")],
-                   capture_output=True, text=True)
+                   capture_output=True, text=True, check=False)
 print("final:", p.stdout.strip())
