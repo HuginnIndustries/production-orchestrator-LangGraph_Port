@@ -1,95 +1,74 @@
 #!/usr/bin/env python3
-"""Capture the Production Orchestrator demo as 1080p segments via headless
-Chromium. Correct Playwright video pattern: close the page/context first,
-then save_as names the recorded file."""
+"""Capture Production Orchestrator demo shots for the submission video.
+
+Fixes over v1:
+- NO scenario click: app.js boot() auto-runs rush-order; clicking the chip
+  re-triggers newScenario() and resets to the spinner (the "falls back to
+  front page" bug).
+- Each shot is ONE continuous recording >= its narration length; assembly
+  must NOT -stream_loop (the "same first screen repeats" bug).
+- device_scale_factor=2 + record_video_size 3840x2160: supersampled VP8 so
+  the 1080p downscale is crisp (v1's 850 kbps 1080p source read as 480p).
+"""
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:8765"
-OUT = Path("/tmp/po-captures")
+OUT = Path("/tmp/po-captures-4k")
 OUT.mkdir(exist_ok=True)
 CHROMIUM = "/home/jamessesler/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome"
 
-def record_shot(browser, name: str, actions) -> str:
+def record(browser, name, actions):
     ctx = browser.new_context(
         viewport={"width": 1920, "height": 1080},
+        device_scale_factor=2,
         record_video_dir=str(OUT),
-        record_video_size={"width": 1920, "height": 1080},
+        record_video_size={"width": 3840, "height": 2160},
     )
     page = ctx.new_page()
     page.goto(BASE)
     actions(page)
-    page.close()
-    video = ctx.videos[0] if hasattr(ctx, "videos") and ctx.videos else page.video
+    page.close()  # video must be closed-page before save_as
     path = str(OUT / f"shot-{name}.webm")
-    video.save_as(path)
+    page.video.save_as(path)
     ctx.close()
     print("saved", path)
-    return path
 
-def start_rush(page, settle_ms=7000):
-    page.wait_for_timeout(1500)
-    try:
-        page.click("text=Rush order", timeout=4000)
-    except Exception as e:
-        print("scenario click failed:", e)
-    page.wait_for_timeout(settle_ms)
+def wait_rendered(page):
+    """Wait until the run has rendered the decision buttons (run finished)."""
+    page.wait_for_selector("text=Keep current schedule", timeout=30000)
+    page.wait_for_timeout(1500)  # settle animations
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, executable_path=CHROMIUM)
 
-    # X: scenario chips on the landing state
-    record_shot(browser, "X-chips", lambda pg: pg.wait_for_timeout(3000))
-
-    # B: intake card + first feed rows
     def shot_b(pg):
-        start_rush(pg)
-    record_shot(browser, "B-intake", shot_b)
+        wait_rendered(pg); pg.wait_for_timeout(31000)
+    record(browser, "B-intake", shot_b)
 
-    # C: production board with the conflict visible
     def shot_c(pg):
-        start_rush(pg)
-        try:
-            pg.locator("text=Production board").scroll_into_view_if_needed(timeout=3000)
-        except Exception:
-            pass
-        pg.wait_for_timeout(2000)
-    record_shot(browser, "C-board", shot_c)
+        wait_rendered(pg)
+        pg.locator("text=Production board").scroll_into_view_if_needed(timeout=5000)
+        pg.wait_for_timeout(2000); pg.wait_for_timeout(25000)
+    record(browser, "C-board", shot_c)
 
-    # D: interrupt row + technical proof expansion (proposal hash)
     def shot_d(pg):
-        start_rush(pg)
-        for label in ("Technical proof", "Holding the write", "Stopped at a real Strands interrupt"):
-            try:
-                pg.click(f"text={label}", timeout=2500)
-                break
-            except Exception:
-                continue
-        pg.wait_for_timeout(2500)
-    record_shot(browser, "D-interrupt", shot_d)
+        wait_rendered(pg)
+        pg.click("text=Technical proof", timeout=5000)
+        pg.wait_for_timeout(4000); pg.wait_for_timeout(14000)
+    record(browser, "D-interrupt", shot_d)
 
-    # E: reject path
     def shot_e(pg):
-        start_rush(pg)
-        try:
-            pg.click("text=Keep current schedule", timeout=5000)
-        except Exception as e:
-            print("reject click failed:", e)
-        pg.wait_for_timeout(5000)
-    record_shot(browser, "E-reject", shot_e)
+        wait_rendered(pg)
+        pg.click("text=Keep current schedule", timeout=5000)
+        pg.wait_for_timeout(9000)
+    record(browser, "E-reject", shot_e)
 
-    # F: approve path
     def shot_f(pg):
-        start_rush(pg)
-        try:
-            pg.click("text=Approve coordinated plan", timeout=5000)
-        except Exception as e:
-            print("approve click failed:", e)
-        pg.wait_for_timeout(6000)
-    record_shot(browser, "F-approve", shot_f)
+        wait_rendered(pg)
+        pg.click("text=Approve coordinated plan", timeout=5000)
+        pg.wait_for_timeout(9000)
+    record(browser, "F-approve", shot_f)
 
     browser.close()
-
 print("done")
-for f in sorted(Path(OUT).glob("shot-*.webm")):
-    print(f.name, f.stat().st_size)
