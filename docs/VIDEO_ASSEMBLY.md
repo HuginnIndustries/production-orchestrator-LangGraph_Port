@@ -1,68 +1,91 @@
 # Video assembly inventory — Production Orchestrator submission
 
-Generated Sep 8, 2026. All screen material for shots A–F + X is captured; shot G
-is scripted and verified. Waiting on: narration audio (Breeze-TTS-2 clips from
-mimir, due Sep 9 midday) and final voice selection.
+Updated September 9, 2026. This document describes the corrected v3 capture and
+assembly pipeline; it supersedes the padded v2 render.
 
-## Captured footage (v2, September 9 — supersedes the v1 table)
+## Final artifact
+
+- Durable video: `~/Documents/Github/notes/submission-assets/submission-video.mp4`
+- Durable segments: `~/Documents/Github/notes/submission-assets/segments/seg-A.mp4`
+  through `seg-H.mp4`
+- Scratch build: `/tmp/po-video-final-v3/`
+- Format: H.264 video, AAC audio, 1920×1080, 30 fps, SAR 1:1, DAR 16:9
+- Runtime: 167.44 seconds (2:47); below the five-minute limit
+- Narration: `~/po-narration-kokoro/shot-A.mp3` through `shot-H.mp3`
+
+Video binaries stay outside Git. The repository contains only the reproducible
+capture, assembly, and verification tools.
+
+## Shot inventory
 
 | File | Shot | Content | Narration |
 |---|---|---|---|
-| `/tmp/po-captures-4k/shot-B-intake.webm` (33.3s) | B (15.5–47.0s) | intake card + feed, one continuous run | 31.6s |
-| `/tmp/po-captures-4k/shot-C-board.webm` (29.4s) | C (47.0–74.7s) | board + feed, continuous | 27.7s |
-| `/tmp/po-captures-4k/shot-D-interrupt.webm` (21.0s) | D (74.7–94.2s) | technical proof expanded, hash visible | 19.4s |
-| `/tmp/po-captures-4k/shot-E-reject.webm` (11.9s) | E (94.2–104.6s) | reject: zero plans applied | 10.5s |
-| `/tmp/po-captures-4k/shot-F-approve.webm` (11.9s) | F (104.6–115.0s) | approve: applied exactly once | 10.4s |
-| generated cards (A/G/H) | A (0–15.5s), G (115.0–149.4s), H (149.4–167.3s) | 4K text cards, **narrated** | 15.5 / 34.4 / 17.9s |
+| `/tmp/po-captures-1080p/shot-B-intake.webm` (33.3s) | B (15.5–47.0s) | Intake card and activity feed, one continuous run | 31.6s |
+| `/tmp/po-captures-1080p/shot-C-board.webm` (29.4s) | C (47.0–74.7s) | Production board and feed | 27.7s |
+| `/tmp/po-captures-1080p/shot-D-interrupt.webm` (20.9s) | D (74.7–94.2s) | Technical proof expanded; immutable hash visible | 19.4s |
+| `/tmp/po-captures-1080p/shot-E-reject.webm` (11.9s) | E (94.2–104.6s) | Reject path; zero plans applied | 10.5s |
+| `/tmp/po-captures-1080p/shot-F-approve.webm` (11.9s) | F (104.6–115.0s) | Approval path; plan applied exactly once | 10.4s |
+| Generated text card | A (0–15.5s) | Hero claim | 15.5s |
+| Generated text card | G (115.0–149.4s) | Forged, valid, and replayed approval outcomes | 34.4s |
+| Generated text card | H (149.4–167.4s) | Governance-layer close and repository URL | 17.9s |
 
-All sources 3840×2160 (device_scale_factor=2), assembled to 1920×1080 via
-Lanczos + unsharp at 14 Mbps. **Final video:**
-`~/Documents/Github/notes/submission-assets/submission-video.mp4` (167.4s ≈ 2:47,
-11.2 MB) with per-segment files under `segments/`. Build tooling committed at
-`0b220e6`: `scripts/capture/capture-demo-shots.py` +
-`scripts/capture/assemble_submission_video.py`.
+## Rebuild
 
-## Shot A (slate) and shot H (architecture close)
+Start the local demo in one terminal:
 
-- A: hero-claim text card over a clean background — generate as a 22s static/animated
-  card in the editor (no capture needed; text: "Zero unapproved writes — provably
-  fail-closed under forged, stale, and replayed inputs, across a real process boundary.")
-- H: architecture diagram from `docs/ARCHITECTURE.md` + hero-claim card. Render the
-  diagram to PNG for the closing card.
-- Pending insert between G and H (script says: only if the runtime is under target —
-  **it is deployed and evidenced**): 15s AgentCore console/CLI shot — the
-  `get-agent-runtime` READY output plus the invocation evidence JSON makes an
-  honest terminal shot. Narration: "and it runs deployed, not just locally."
+```bash
+uv sync --locked
+uv run production-orchestrator-demo
+```
 
-## Shot G — terminal attacks (scripted, verified)
+Then capture, assemble, and verify:
 
-- Script: `/tmp/po_shotG_record.sh` (run on camera; ~40s runtime)
-- Verified outputs: forged → exit 1; legitimate → exit 0 (rev 2, passed); replay →
-  exit 1; both attack reports never created
-- Show `echo "exit=$?"` after each — the script includes it
-- Runtime staging lives in `/tmp/po-attack-demo-g/` (gitignored-style scratch; delete after)
+```bash
+python3 scripts/capture/capture-demo-shots.py
+scripts/capture/assemble_submission_video.py
+scripts/capture/verify_submission_video.py /tmp/po-video-final-v3
+```
 
-## Narration
+Expected verification output:
 
-- Script: `docs/VIDEO_SCRIPT.md` — shots A–H "Narration (spoken)" column, shot B
-  INCLUDING the six added words ("…and this runs on Amazon Bedrock") since #11's
-  evidence is committed
-- Breeze clips expected: `~/po-narration/shot-<A..H>.mp3` (mimir agent delivering)
-- Fallback: built-in TTS (rejected once — hold only if Breeze fails)
+```text
+VISUAL VERIFICATION PASSED: A/G/H text visible; B-F fill the frame
+```
 
-## Assembly steps (once audio lands)
+Copy a verified build to durable storage only after that command succeeds:
 
-1. Cut each capture to its narration length (durations above); speed 1.0
-2. Lay narration track; sync cut points to the spoken beats
-3. Shot A slate (0:00–0:22), X insert only if runtime is over (it isn't — skip or use as b-roll)
-4. Shot G: record terminal per script; mask nothing (no account ids appear — ARNs
-   are not printed by these commands)
-5. H: architecture PNG + hero-claim card
-6. 1920×1080, 30fps, target 4:00, hard cap 5:00; hero claim on screen at open and close
-7. Export H.264 + AAC, upload public YouTube, verify logged-out playback
+```bash
+install -Dm644 /tmp/po-video-final-v3/submission-video.mp4 \
+  ~/Documents/Github/notes/submission-assets/submission-video.mp4
+mkdir -p ~/Documents/Github/notes/submission-assets/segments
+cp /tmp/po-video-final-v3/seg-*.mp4 \
+  ~/Documents/Github/notes/submission-assets/segments/
+```
 
-## Pre-publish audit (from VIDEO_SCRIPT.md)
+## Regression guards
 
-- Re-read narration against `ARCHITECTURE.md` proof table; strike any pending-capability sentence
-- Same numbers in video, Devpost copy, and the three builder.aws posts
-- Verify: no account ids, no ARNs, no profile names, no real paths on camera
+Two metadata-valid visual failures occurred in v2, so width/height checks alone
+are insufficient:
+
+1. Playwright records CSS viewport pixels, not device-scale pixels. A 1920×1080
+   viewport paired with `record_video_size=3840x2160` put the page in the
+   upper-left quadrant and filled the remaining 75% with neutral gray. Capture
+   now pairs a 1920×1080 viewport with an exactly matching video surface.
+2. Supplying two separate `-vf` options caused FFmpeg's scaling filter to
+   replace the title-card `drawtext` filter. Assembly now constructs exactly one
+   filter chain per output, and card strings are passed through `textfile` with
+   expansion disabled rather than fragile inline quoting.
+
+`scripts/capture/verify_submission_video.py` decodes real frames and fails if:
+
+- A, G, or H lacks visible card text;
+- B, C, D, E, or F contains more than 10% neutral-gray recorder padding; or
+- any segment is not exactly 1920×1080.
+
+## Pre-publish audit
+
+- Re-read narration against `docs/ARCHITECTURE.md`; remove any unsupported claim.
+- Keep numbers consistent across the video, Devpost copy, and builder.aws posts.
+- Confirm no account IDs, ARNs, AWS profile names, credentials, or private paths
+  appear in any frame.
+- Upload to YouTube, then verify public logged-out playback at 1080p with audio.
