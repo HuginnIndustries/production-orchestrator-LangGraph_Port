@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#070912"/><stop offset="1" stop-color="#17192d"/></linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#24283f" stroke-width="1" opacity=".45"/></pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/><rect width="1920" height="1080" fill="url(#grid)"/>
+  <text x="960" y="170" text-anchor="middle" fill="#22d3ee" font-family="Liberation Sans,Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="6">THE GOVERNING PROMISE</text>
+  <text x="960" y="282" text-anchor="middle" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="80" font-weight="700">ZERO UNAPPROVED WRITES</text>
+  <text x="960" y="348" text-anchor="middle" fill="#c7cce0" font-family="Liberation Sans,Arial,sans-serif" font-size="33">Human approval binds to the exact reviewed proposal.</text>
+  <line x1="300" y1="414" x2="1620" y2="414" stroke="#22d3ee" stroke-width="3" opacity=".7" filter="url(#glow)"/>
+  <g font-family="Liberation Sans,Arial,sans-serif" text-anchor="middle">
+    <rect x="110" y="500" width="390" height="240" rx="18" fill="#0f172a" stroke="#fb7185" stroke-width="2"/>
+    <text x="305" y="570" fill="#fb7185" font-size="26" font-weight="700" letter-spacing="4">FORGED</text><text x="305" y="664" fill="#f8fafc" font-size="43" font-weight="700">REFUSE</text>
+    <rect x="550" y="500" width="390" height="240" rx="18" fill="#0f172a" stroke="#fb7185" stroke-width="2"/>
+    <text x="745" y="570" fill="#fb7185" font-size="26" font-weight="700" letter-spacing="4">STALE</text><text x="745" y="664" fill="#f8fafc" font-size="43" font-weight="700">REFUSE</text>
+    <rect x="990" y="500" width="390" height="240" rx="18" fill="#0f172a" stroke="#fb7185" stroke-width="2"/>
+    <text x="1185" y="570" fill="#fb7185" font-size="26" font-weight="700" letter-spacing="4">REPLAYED</text><text x="1185" y="664" fill="#f8fafc" font-size="43" font-weight="700">REFUSE</text>
+    <rect x="1420" y="500" width="390" height="240" rx="18" fill="#0f172a" stroke="#fbbf24" stroke-width="2"/>
+    <text x="1615" y="570" fill="#fbbf24" font-size="26" font-weight="700" letter-spacing="4">RESTARTED</text><text x="1615" y="649" fill="#f8fafc" font-size="36" font-weight="700">FAIL CLOSED</text>
+  </g>
+  <rect x="345" y="830" width="1230" height="108" rx="54" fill="#064e3b" stroke="#34d399" stroke-width="2"/>
+  <text x="960" y="899" text-anchor="middle" fill="#d1fae5" font-family="Liberation Sans,Arial,sans-serif" font-size="32" font-weight="700">Approve the exact hash → apply the exact plan once</text>
+</svg>

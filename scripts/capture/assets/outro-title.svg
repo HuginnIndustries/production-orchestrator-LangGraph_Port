@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#070912"/><stop offset="1" stop-color="#17192d"/></linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#24283f" stroke-width="1" opacity=".45"/></pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/><rect width="1920" height="1080" fill="url(#grid)"/>
+  <text x="960" y="178" text-anchor="middle" fill="#22d3ee" font-family="Liberation Sans,Arial,sans-serif" font-size="27" font-weight="700" letter-spacing="6">AGENTS FOR HUMANS HACKATHON</text>
+  <text x="960" y="320" text-anchor="middle" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="84" font-weight="700">Production Orchestrator</text>
+  <text x="960" y="404" text-anchor="middle" fill="#fbbf24" font-family="Liberation Sans,Arial,sans-serif" font-size="34" font-weight="700" letter-spacing="4">PROFESSIONAL AGENTS TRACK</text>
+  <line x1="460" y1="476" x2="1460" y2="476" stroke="#22d3ee" stroke-width="3" opacity=".8" filter="url(#glow)"/>
+  <text x="960" y="588" text-anchor="middle" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="58" font-weight="700">ZERO UNAPPROVED WRITES</text>
+  <text x="960" y="658" text-anchor="middle" fill="#c7cce0" font-family="Liberation Sans,Arial,sans-serif" font-size="29">Strands Agents · Amazon Bedrock · AgentCore</text>
+  <rect x="340" y="760" width="1240" height="112" rx="16" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+  <text x="960" y="829" text-anchor="middle" fill="#f8fafc" font-family="Liberation Mono,monospace" font-size="27">github.com/TheAmericanMaker/production-orchestrator</text>
+  <text x="960" y="960" text-anchor="middle" fill="#94a3b8" font-family="Liberation Sans,Arial,sans-serif" font-size="23">Code · architecture · tests · deployment evidence</text>
+</svg>

@@ -29,7 +29,23 @@ Open `http://127.0.0.1:8765`. The demo runs the **complete eight-tool Strands wo
 
 Three synthetic scenarios are selectable from the page — a rush order with a capacity conflict and thread shortage, a team-jersey order that displaces two smaller jobs, and a metallic monogram batch with a material shortage. Expand **Technical proof** to inspect the immutable proposal hash, model/provider facts, distinct start/resume process IDs, and the full audit chain.
 
-The local demo drives the workflow with a deterministic local tool-calling model, so it requires no paid model call; every shop fact still comes from a real tool call and the judged-provider evidence for the same workflow was executed through Amazon Bedrock (see `evidence/`). It binds only to localhost, stores transient SQLite/session state under the ignored `data/demo-runtime/` path, prepares communications as unsent drafts, and does not provide production authentication, multi-tenancy, deployment, or external integrations.
+The local demo drives the workflow with a deterministic local tool-calling model, so it requires no paid model call; every shop fact still comes from a real tool call and the judged-provider evidence for the same workflow was executed through Amazon Bedrock (see `evidence/`). It binds only to localhost, stores transient SQLite/session state under the ignored `data/demo-runtime/` path, prepares communications as unsent drafts, and does not provide production authentication, multi-tenancy, or external integrations.
+
+## How this uses Strands Agents
+
+This is a real Strands tool workflow, not a chat interface wrapped around deterministic code:
+
+| Strands capability | Production Orchestrator implementation |
+|---|---|
+| `Agent` | One agent coordinates intake, shop reads, deterministic analysis, proposal creation, communication drafting, and the gated application step in [`workflow.py`](src/production_orchestrator/workflow.py). |
+| Eight `@tool` functions | `intake_customer_request`, `list_active_orders`, `get_inventory`, `get_machine_capacity`, `analyze_shop_blockers`, `propose_schedule`, `draft_communications`, and `apply_production_plan`. |
+| `BeforeToolCallEvent` hook | `ProductionPlanApprovalHook` intercepts `apply_production_plan` before execution and raises the approval interrupt. |
+| Human-in-the-loop interrupt | The reviewer accepts or rejects the exact hash-addressed proposal; a fresh process submits the official `interruptResponse`. |
+| `FileSessionManager` | Persists the Strands session and pending interrupt so the worker can die between proposal and decision. |
+| Amazon Bedrock provider | The full eight-tool reject and approve paths were exercised with `amazon.nova-lite-v1:0`; reports are under [`evidence/`](evidence/). |
+| Amazon Bedrock AgentCore | The same workflow is deployed behind `start` and `decide` invocations; [`agentcore-invocation-evidence.json`](evidence/agentcore-invocation-evidence.json) proves separate-process reject and approve outcomes. |
+
+The model chooses and sequences tools, but deterministic code validates all extracted shop facts, calculates blockers and quantities, binds approval to canonical proposal content, and enforces the write gate. That division keeps agent reasoning useful without asking the model to enforce its own permissions.
 
 ## Problem
 
@@ -56,15 +72,19 @@ See [`DEVELOPMENT_CONTRACT.md`](DEVELOPMENT_CONTRACT.md) for the non-negotiable 
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system and cross-process approval diagrams, and the table mapping every guarantee to the test or committed evidence that proves it
 - [`docs/VIDEO_SCRIPT.md`](docs/VIDEO_SCRIPT.md) — shot-by-shot submission video script, including verified commands for the fail-closed capture
+- [`deploy/agentcore/README.md`](deploy/agentcore/README.md) — deployed Runtime contract, process-boundary model, limits, and reproducible deployment path
+- [`evidence/agentcore-invocation-evidence.json`](evidence/agentcore-invocation-evidence.json) — live deployed reject/approve invocation pairs
 - [`evidence/OLLAMA_WORKFLOW_RUNS.md`](evidence/OLLAMA_WORKFLOW_RUNS.md) — live local-model rejection/approval results, hardware, token counts, latency, and measurement caveats
 
 ## Current verdict
 
-The deterministic core and real Strands interrupt loop are operational. All seven Strands tools were observed in independent rejection and approval runs, `FileSessionManager` persisted each session, and all eight machine-evaluated workflow checks passed through Amazon Bedrock.
+The deterministic core and real Strands interrupt loop are operational. All eight Strands tools were observed in independent full-intake rejection and approval runs, `FileSessionManager` persisted each session, and both workflows reported `WORKFLOW_PASSED=true` through Amazon Bedrock.
 
 The judged-provider feasibility gate is validated with `amazon.nova-lite-v1:0` in `us-east-1`. Rejection preserved revision 1 with no `plan_applied` event; exact approval advanced atomically to revision 2, and the sole applied hash matched the proposal reviewed at the interrupt. Local Ollama development runs now also pass the complete eight-tool intake workflow and fresh-process rejection/approval paths with `gemma4:e4b`; they demonstrate provider independence but remain development evidence, not judged-provider proof.
 
 Immutable proposals are persisted in SQLite by canonical content hash. Fresh-process Bedrock rejection and exact-approval runs now also prove that a new Python interpreter can reconstruct the same Strands agent and `FileSessionManager` session, restore the pending interrupt, and submit the official `interruptResponse`. Rejection preserved revision 1; approval applied the exact persisted proposal once and advanced to revision 2. Wrong interrupt IDs, altered session/proposal/provider bindings, stale state, and replay fail closed.
+
+The same workflow is deployed to Amazon Bedrock AgentCore Runtime as `production_orchestrator-3S24euH1Cz`. Live start/decide pairs against endpoint `production_orchestrator_ep` reproduced both outcomes in distinct in-container processes: rejection applied zero plans, approval applied the exact reviewed hash once, and both reported `workflow_passed=true`. See the [deployment runbook](deploy/agentcore/README.md) and [invocation evidence](evidence/agentcore-invocation-evidence.json).
 
 ## Spike questions
 
@@ -154,7 +174,7 @@ uv run production-orchestrator-restart-spike resume \
   --aws-region us-east-1
 ```
 
-The independently executed restart reports are [`evidence/bedrock-restart-rejection.json`](evidence/bedrock-restart-rejection.json) and [`evidence/bedrock-restart-approval.json`](evidence/bedrock-restart-approval.json). They prove session reconstruction and approval safety across real process boundaries; the earlier paired reports remain the evidence for the complete seven-tool workflow.
+The independently executed restart reports are [`evidence/bedrock-restart-rejection.json`](evidence/bedrock-restart-rejection.json) and [`evidence/bedrock-restart-approval.json`](evidence/bedrock-restart-approval.json). They prove session reconstruction and approval safety across real process boundaries. The later [`bedrock-intake-rejection.json`](evidence/bedrock-intake-rejection.json) and [`bedrock-intake-approval.json`](evidence/bedrock-intake-approval.json) reports prove the complete eight-tool customer-email workflow through both decisions.
 
 ### Local-model workflow (no cloud account)
 

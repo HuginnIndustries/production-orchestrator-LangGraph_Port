@@ -17,7 +17,7 @@ What makes it different is the **governance layer around the write**:
 - **The approval survives process death.** The workflow is stopped mid-flight, a fresh process restores the persisted Strands session, and the official `interruptResponse` completes the loop — proven across distinct process IDs.
 - **Deterministic logic owns every shop fact.** The model extracts; it never invents. Validation rejects any extraction that doesn't match reality, and the same scenario run across three model backends (deterministic, Amazon Bedrock, local Ollama) produces the *same canonical proposal hash*.
 
-Built with the **Strands Agents SDK** (Amazon Bedrock, with AgentCore deployment for judge access). Apache-2.0. Every demo fact is synthetic; every claim is backed by a committed evidence report.
+Built with the **Strands Agents SDK** on Amazon Bedrock, with the same workflow deployed to Amazon Bedrock AgentCore Runtime. Apache-2.0. Every demo fact is synthetic; every claim is backed by a committed evidence report.
 
 **Hero metric: zero unapproved writes — provably fail-closed under forged, stale, and replayed inputs, across a real process boundary.**
 
@@ -78,7 +78,7 @@ No credentials needed. The full CLI evidence path (including live-model and atta
 | Install/run consistently | README quickstart; CI runs the install (uv) + 114 tests |
 | Free unrestricted judge access through judging | Localhost demo; keep-public obligation through ~Oct 14 |
 | Architecture diagram | `docs/ARCHITECTURE.md` |
-| Video ≤5 min, public, problem/audience/importance | `docs/VIDEO_SCRIPT.md` (4:00 target); upload Sep 10–11 |
+| Video ≤5 min, public, problem/audience/importance | `docs/VIDEO_SCRIPT.md` (3:59 final cut); publish on YouTube or Vimeo |
 | Judges may elect not to test | Video shows the complete workflow + attack demo |
 | Prior-work disclosure with submission | Text above, pasted into form |
 | builder.aws posts (0.2 each) | Three posts, "Agents for Humans" in each title (below) |

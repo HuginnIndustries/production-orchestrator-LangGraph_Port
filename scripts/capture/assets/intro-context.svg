@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070912"/><stop offset="1" stop-color="#17192d"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#24283f" stroke-width="1" opacity=".45"/>
+    </pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/><rect width="1920" height="1080" fill="url(#grid)"/>
+  <circle cx="1600" cy="160" r="260" fill="#22d3ee" opacity=".045"/><circle cx="260" cy="900" r="340" fill="#a78bfa" opacity=".04"/>
+  <text x="120" y="102" fill="#22d3ee" font-family="Liberation Sans,Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="5">AGENTS FOR HUMANS HACKATHON</text>
+  <text x="120" y="208" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="82" font-weight="700">Production Orchestrator</text>
+  <text x="120" y="266" fill="#aeb5cb" font-family="Liberation Sans,Arial,sans-serif" font-size="34">Governed production scheduling for decorated-apparel shops</text>
+  <rect x="120" y="336" width="800" height="270" rx="20" fill="#0f172a" stroke="#fb7185" stroke-width="2"/>
+  <text x="168" y="398" fill="#fb7185" font-family="Liberation Sans,Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="4">THE PROBLEM</text>
+  <text x="168" y="472" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="35" font-weight="700">One wrong schedule update can make</text>
+  <text x="168" y="520" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="35" font-weight="700">several customer orders late.</text>
+  <text x="168" y="572" fill="#aeb5cb" font-family="Liberation Sans,Arial,sans-serif" font-size="25">Machines · materials · schedules · promises</text>
+  <rect x="970" y="336" width="830" height="270" rx="20" fill="#0f172a" stroke="#34d399" stroke-width="2"/>
+  <text x="1018" y="398" fill="#34d399" font-family="Liberation Sans,Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="4">BUILT FOR</text>
+  <text x="1018" y="472" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="35" font-weight="700">Shop owners · production managers</text>
+  <text x="1018" y="520" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="35" font-weight="700">Operations teams</text>
+  <text x="1018" y="572" fill="#aeb5cb" font-family="Liberation Sans,Arial,sans-serif" font-size="25">Small embroidery and decorated-apparel shops</text>
+  <rect x="120" y="664" width="1680" height="238" rx="20" fill="#0b1220" stroke="#334155" stroke-width="2"/>
+  <text x="175" y="734" fill="#fbbf24" font-family="Liberation Sans,Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="4">PROFESSIONAL AGENTS TRACK</text>
+  <line x1="175" y1="770" x2="1745" y2="770" stroke="#334155" stroke-width="2"/>
+  <text x="175" y="842" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="34" font-weight="700">Strands Agents</text>
+  <text x="570" y="842" fill="#64748b" font-family="Liberation Sans,Arial,sans-serif" font-size="34">+</text>
+  <text x="642" y="842" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="34" font-weight="700">Amazon Bedrock</text>
+  <text x="1030" y="842" fill="#64748b" font-family="Liberation Sans,Arial,sans-serif" font-size="34">+</text>
+  <text x="1102" y="842" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="34" font-weight="700">AgentCore deployment</text>
+  <rect x="120" y="962" width="1680" height="4" rx="2" fill="#22d3ee" opacity=".7" filter="url(#glow)"/>
+</svg>

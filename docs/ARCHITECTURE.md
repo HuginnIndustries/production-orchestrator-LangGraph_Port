@@ -6,7 +6,7 @@ The claim this architecture exists to prove:
 
 > **Zero unapproved writes — provably fail-closed under forged, stale, and replayed inputs, across a real process boundary.**
 
-Every box below is code in this repository. The "Where it is proven" table at the end maps each guarantee to the test or committed evidence file that demonstrates it, and marks the two guarantees still awaiting their gates.
+Every box below is code in this repository. The "Where it is proven" table at the end maps each guarantee to the test or committed evidence file that demonstrates it, including live Bedrock intake and deployed AgentCore execution.
 
 ## System
 
@@ -102,6 +102,7 @@ The provider configuration includes **which credential chain the run is entitled
 | Judge-facing web demo | `uv run production-orchestrator-demo` | deterministic local tool-calling model, no paid call | Customer email, live activity feed of the real eight-tool trail, before/after production board, unsent drafts, approve/reject, technical proof panel with hash, distinct process ids, and audit chain |
 | Paired workflow spike | `production-orchestrator-spike` | Bedrock `amazon.nova-lite-v1:0` | Full workflow under the judged provider, rejection and exact-approval paths, committed evidence reports |
 | Restart spike | `production-orchestrator-restart-spike start` / `resume` | Bedrock, local Ollama (`ollama-workflow`, no cloud account), or deterministic — with or without intake | Two-process approval with the checkpoint gate; prints `INTERRUPT_ID`, `PROPOSAL_HASH`, and `WORKFLOW_PASSED`. The identical governance code runs under every provider, which is the provider-independence claim made concrete |
+| Deployed AgentCore Runtime | AgentCore `POST /invocations` with `start` / `decide` | deterministic workflow provider in the committed live endpoint evidence | The same eight-tool workflow across separate invocations and fresh subprocesses; committed reject and approve evidence proves zero versus exactly-one application. The adapter also supports the separately proven Bedrock workflow configuration through a container task role. |
 
 The web demo runs the identical tool sequence as the judged path with a deterministic model substituted for the provider, so it is honest to demonstrate offline and it costs nothing to replay. It binds to localhost, keeps transient state under the ignored `data/demo-runtime/`, prepares communications as unsent drafts, and ships no authentication, multi-tenancy, or external integration.
 
@@ -121,7 +122,7 @@ The web demo runs the identical tool sequence as the judged path with a determin
 | Provider identity persisted at start is exactly what resume trusts | `test_provider_configuration_contract_is_shared_across_providers`, `test_bedrock_workflow_resume_accepts_its_own_checkpoint_configuration` |
 | Invalid model extraction fails closed with zero domain mutation | `tests/test_intake.py` — unknown product, non-positive quantity, unknown day, out-of-range priority, malformed order id |
 | Intake is atomic and audited with its post-intake digest | `test_persistence_add_order_is_atomic_and_audited` |
-| **Live Bedrock extraction through the full intake workflow, both decisions** | **Pending** — issue #11; the rejection `start` leg already succeeded against live Bedrock, the resume leg was blocked by the defect fixed in PR #16 and is being re-run |
-| **Deployed cloud execution with visible logs and session isolation** | **Pending** — issue #12 (Bedrock AgentCore Runtime); the honest fallback is the localhost demo plus committed deployment evidence |
+| **Live Bedrock extraction through the full intake workflow, both decisions** | `evidence/bedrock-intake-rejection.json`, `evidence/bedrock-intake-approval.json` — both report `WORKFLOW_PASSED=true` across distinct processes; rejection stayed at revision 1 with zero applications, approval advanced to revision 2 with exactly one application of hash `6ef62d9f…` |
+| **Deployed cloud execution across isolated AgentCore sessions** | `evidence/agentcore-invocation-evidence.json` — deployed runtime and endpoint; reject and approve start/decide pairs, distinct in-container PIDs 10 and 14, zero versus exactly-one application, shared proposal hash `6ef62d9f…`, and `workflow_passed=true` |
 
-Nothing in this document may be upgraded from Pending without a committed report from a real run. See [`DEVELOPMENT_CONTRACT.md`](../DEVELOPMENT_CONTRACT.md) for the evidence-honesty rules this file is bound by.
+Every deployment claim in this document is backed by a committed report from a real run. See [`DEVELOPMENT_CONTRACT.md`](../DEVELOPMENT_CONTRACT.md) for the evidence-honesty rules this file is bound by.

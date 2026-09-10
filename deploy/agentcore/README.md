@@ -1,6 +1,6 @@
 # AgentCore Runtime deployment
 
-Runbook for issue #12. **Deployed September 8, 2026** — runtime `production_orchestrator-3S24euH1Cz` (READY), endpoint `production_orchestrator_ep` (READY), image `sha256:d9df7685…` in ECR `production-orchestrator-agentcore` (us-east-1). Live invocation evidence: [`evidence/agentcore-invocation-evidence.json`](../evidence/agentcore-invocation-evidence.json) — reject pair (phase `rejected`, zero applications) and approve pair (phase `approved`, exactly one application of hash `6ef62d9f…`), distinct start/resume PIDs in-container on every decide. This runbook remains the reproducible path from a clean account.
+Runbook for issue #12. **Deployed September 8, 2026** — runtime `production_orchestrator-3S24euH1Cz` (READY), endpoint `production_orchestrator_ep` (READY), image `sha256:d9df7685…` in ECR `production-orchestrator-agentcore` (us-east-1). Live invocation evidence: [`evidence/agentcore-invocation-evidence.json`](../../evidence/agentcore-invocation-evidence.json) — reject pair (phase `rejected`, zero applications) and approve pair (phase `approved`, exactly one application of hash `6ef62d9f…`), distinct start/resume PIDs in-container on every decide. The committed endpoint proof uses the credential-free deterministic workflow provider; the same adapter's Bedrock workflow path is proven separately by `evidence/bedrock-intake-*.json` and can be configured with the container task role. This runbook remains the reproducible path from a clean account.
 
 ## What is deployed
 

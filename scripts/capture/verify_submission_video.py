@@ -92,9 +92,9 @@ def visible_text_fraction(pixels: list[tuple[int, int, int]]) -> float:
 
 
 def verify(segment_dir: Path) -> list[str]:
-    """Return visual contract violations for segments A through H."""
+    """Return visual contract violations for segments A through I."""
     errors: list[str] = []
-    for shot in "ABCDEFGH":
+    for shot in "ABCDEFGHI":
         path = segment_dir / f"seg-{shot}.mp4"
         if not path.is_file():
             errors.append(f"{path}: missing")
@@ -106,7 +106,7 @@ def verify(segment_dir: Path) -> list[str]:
             )
             continue
         pixels = sampled_pixels(path)
-        if shot in "AGH":
+        if shot in "AGHI":
             text_fraction = visible_text_fraction(pixels)
             if text_fraction < MIN_CARD_TEXT_FRACTION:
                 errors.append(
@@ -131,7 +131,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
-    print("VISUAL VERIFICATION PASSED: A/G/H text visible; B-F fill the frame")
+    print("VISUAL VERIFICATION PASSED: A/G/H/I text visible; B-F fill the frame")
     return 0
 
 

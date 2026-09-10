@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#070912"/><stop offset="1" stop-color="#17192d"/></linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#24283f" stroke-width="1" opacity=".45"/></pattern>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto"><path d="M0 0L11 5.5L0 11z" fill="#64748b"/></marker>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/><rect width="1920" height="1080" fill="url(#grid)"/>
+  <text x="120" y="105" fill="#22d3ee" font-family="Liberation Sans,Arial,sans-serif" font-size="25" font-weight="700" letter-spacing="5">GOVERNANCE ARCHITECTURE</text>
+  <text x="120" y="190" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="58" font-weight="700">Read freely. Write only what a human approved.</text>
+  <g stroke="#64748b" stroke-width="4" fill="none" marker-end="url(#arrow)">
+    <path d="M390 390H455"/><path d="M735 390H800"/><path d="M1080 390H1145"/><path d="M1425 390H1490"/>
+    <path d="M1630 485V570H1290"/><path d="M1010 690H945"/><path d="M665 690H600"/>
+  </g>
+  <g font-family="Liberation Sans,Arial,sans-serif" text-anchor="middle">
+    <g><rect x="110" y="300" width="280" height="180" rx="18" fill="#0f172a"/><rect x="110" y="300" width="280" height="180" rx="18" fill="#1e293b" opacity=".55" stroke="#94a3b8" stroke-width="2"/><text x="250" y="374" fill="#f8fafc" font-size="29" font-weight="700">Customer request</text><text x="250" y="417" fill="#aeb5cb" font-size="22">unstructured intake</text></g>
+    <g><rect x="455" y="300" width="280" height="180" rx="18" fill="#0f172a"/><rect x="455" y="300" width="280" height="180" rx="18" fill="#064e3b" opacity=".55" stroke="#34d399" stroke-width="2"/><text x="595" y="366" fill="#f8fafc" font-size="29" font-weight="700">Strands agent</text><text x="595" y="409" fill="#d1fae5" font-size="22">8 real shop tools</text></g>
+    <g><rect x="800" y="300" width="280" height="180" rx="18" fill="#0f172a"/><rect x="800" y="300" width="280" height="180" rx="18" fill="#4c1d95" opacity=".42" stroke="#a78bfa" stroke-width="2"/><text x="940" y="366" fill="#f8fafc" font-size="28" font-weight="700">Immutable proposal</text><text x="940" y="409" fill="#ddd6fe" font-size="22">canonical content hash</text></g>
+    <g><rect x="1145" y="300" width="280" height="180" rx="18" fill="#0f172a"/><rect x="1145" y="300" width="280" height="180" rx="18" fill="#881337" opacity=".48" stroke="#fb7185" stroke-width="2"/><text x="1285" y="354" fill="#f8fafc" font-size="27" font-weight="700">BeforeToolCallEvent</text><text x="1285" y="397" fill="#fecdd3" font-size="22">blocks the only write</text><text x="1285" y="432" fill="#fecdd3" font-size="22">real interrupt</text></g>
+    <g><rect x="1490" y="300" width="280" height="180" rx="18" fill="#0f172a"/><rect x="1490" y="300" width="280" height="180" rx="18" fill="#78350f" opacity=".46" stroke="#fbbf24" stroke-width="2"/><text x="1630" y="366" fill="#f8fafc" font-size="29" font-weight="700">Human decision</text><text x="1630" y="409" fill="#fef3c7" font-size="22">approve exact hash</text></g>
+    <g><rect x="1010" y="600" width="280" height="180" rx="18" fill="#0f172a"/><rect x="1010" y="600" width="280" height="180" rx="18" fill="#881337" opacity=".48" stroke="#fb7185" stroke-width="2"/><text x="1150" y="667" fill="#f8fafc" font-size="27" font-weight="700">Fresh process</text><text x="1150" y="708" fill="#fecdd3" font-size="22">verify hostile checkpoint</text><text x="1150" y="743" fill="#fecdd3" font-size="22">fail closed</text></g>
+    <g><rect x="665" y="600" width="280" height="180" rx="18" fill="#0f172a"/><rect x="665" y="600" width="280" height="180" rx="18" fill="#064e3b" opacity=".55" stroke="#34d399" stroke-width="2"/><text x="805" y="667" fill="#f8fafc" font-size="29" font-weight="700">Apply once</text><text x="805" y="710" fill="#d1fae5" font-size="22">exact reviewed plan</text></g>
+    <g><rect x="320" y="600" width="280" height="180" rx="18" fill="#0f172a"/><rect x="320" y="600" width="280" height="180" rx="18" fill="#4c1d95" opacity=".42" stroke="#a78bfa" stroke-width="2"/><text x="460" y="667" fill="#f8fafc" font-size="28" font-weight="700">Audit chain</text><text x="460" y="710" fill="#ddd6fe" font-size="22">decision + attempt</text></g>
+  </g>
+  <rect x="270" y="884" width="1380" height="100" rx="50" fill="#0b1220" stroke="#22d3ee" stroke-width="2"/>
+  <text x="960" y="949" text-anchor="middle" fill="#f8fafc" font-family="Liberation Sans,Arial,sans-serif" font-size="32" font-weight="700">The scheduling is the demo. The governance layer is the product.</text>
+</svg>
