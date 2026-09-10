@@ -1,6 +1,8 @@
 # Devpost Submission Copy — Production Orchestrator
 
 > Draft for `production-orchestrator#13`. Track: **Professional Agents**. All claims below are backed by committed evidence in the repo; nothing here asserts deployment or model access beyond what exists.
+>
+> **Published video:** [Production Orchestrator — governed AI with Strands + AgentCore](https://youtu.be/k2i2jxSdQks) (3:59, public YouTube)
 
 ---
 
@@ -74,11 +76,11 @@ No credentials needed. The full CLI evidence path (including live-model and atta
 |---|---|
 | New Strands agent, real work end-to-end | Eight-tool Strands loop; `docs/ARCHITECTURE.md` |
 | Built during submission period | Fresh repo, history starts Aug 11 2026; disclosure in submission |
-| Public repo, MIT/Apache, license detected | Apache-2.0 file + About detection (verify at publish) |
+| Public repo, MIT/Apache, license detected | [Public GitHub repository](https://github.com/TheAmericanMaker/production-orchestrator); GitHub detects Apache-2.0 |
 | Install/run consistently | README quickstart; CI runs the install (uv) + 114 tests |
 | Free unrestricted judge access through judging | Localhost demo; keep-public obligation through ~Oct 14 |
 | Architecture diagram | `docs/ARCHITECTURE.md` |
-| Video ≤5 min, public, problem/audience/importance | `docs/VIDEO_SCRIPT.md` (3:59 final cut); publish on YouTube or Vimeo |
+| Video ≤5 min, public, problem/audience/importance | [3:59 public YouTube video](https://youtu.be/k2i2jxSdQks); `docs/VIDEO_SCRIPT.md` |
 | Judges may elect not to test | Video shows the complete workflow + attack demo |
 | Prior-work disclosure with submission | Text above, pasted into form |
 | builder.aws posts (0.2 each) | Three posts, "Agents for Humans" in each title (below) |

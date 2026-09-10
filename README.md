@@ -6,7 +6,9 @@
 
 **Hackathon:** Agents for Humans — Professional Agents track
 
-**Repository visibility:** **Private during development.** The official rules require a public repository at submission; publish only after the full-history pre-publication, security, license, and setup gates pass.
+**Submission video:** [Production Orchestrator — governed AI with Strands + AgentCore](https://youtu.be/k2i2jxSdQks) (3:59, public YouTube)
+
+**Repository visibility:** **Public for judging.** GitHub detects the Apache-2.0 license; keep the repository public through judging and the winner announcement.
 
 **Completed feasibility issue:** [#1 — validate scheduling, approval, and audit loop](https://github.com/TheAmericanMaker/production-orchestrator/issues/1)
 

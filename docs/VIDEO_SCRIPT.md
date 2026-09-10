@@ -1,6 +1,6 @@
 # Submission video — shot-by-shot script
 
-**Length:** approximately **3:59**, hard cap 5:00 (rules). **Language:** English. **Host:** public YouTube or Vimeo.
+**Length:** approximately **3:59**, hard cap 5:00 (rules). **Language:** English. **Published video:** [YouTube](https://youtu.be/k2i2jxSdQks).
 **Frame:** establish the problem, audience, hackathon, and stack; demonstrate the complete governed workflow; then prove the cloud deployment and close on the reusable governance product.
 
 Every number spoken below is produced by a command or committed report in this repository; the "Proof" column names it. Deployment claims must remain aligned with [`ARCHITECTURE.md`](ARCHITECTURE.md) and the committed evidence reports.
