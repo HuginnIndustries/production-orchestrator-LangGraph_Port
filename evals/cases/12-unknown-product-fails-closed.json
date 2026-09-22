@@ -1,0 +1,20 @@
+{
+  "id": "12-unknown-product-fails-closed",
+  "scenario": "rush-order",
+  "customer_email": "Subject: hoodies\n\n40 glitter hoodies today please. \u2014 Dana",
+  "extraction": {
+    "order_id": "RUSH-200",
+    "product_code": "glitter-hoodies",
+    "quantity": 40,
+    "requested_day": "2026-08-12",
+    "priority": 100
+  },
+  "verdict": "approve",
+  "expects": "fail_closed",
+  "expected": {
+    "proposal_hash": null,
+    "final_revision": 1,
+    "proposal_created": false,
+    "plan_applied": false
+  }
+}

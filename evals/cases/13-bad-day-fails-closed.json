@@ -1,0 +1,20 @@
+{
+  "id": "13-bad-day-fails-closed",
+  "scenario": "team-jerseys",
+  "customer_email": "Subject: next month\n\n35 jerseys for September 1. \u2014 Coach Rivera",
+  "extraction": {
+    "order_id": "JERSEY-310",
+    "product_code": "team-jerseys",
+    "quantity": 35,
+    "requested_day": "2026-09-01",
+    "priority": 90
+  },
+  "verdict": "approve",
+  "expects": "fail_closed",
+  "expected": {
+    "proposal_hash": null,
+    "final_revision": 1,
+    "proposal_created": false,
+    "plan_applied": false
+  }
+}

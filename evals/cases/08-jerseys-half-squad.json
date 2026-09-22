@@ -1,0 +1,40 @@
+{
+  "id": "08-jerseys-half-squad",
+  "scenario": "team-jerseys",
+  "customer_email": "Subject: finals\n\n18 navy-crest jerseys today for the starters. \u2014 Coach Rivera",
+  "extraction": {
+    "order_id": "JERSEY-310",
+    "product_code": "team-jerseys",
+    "quantity": 18,
+    "requested_day": "2026-08-12",
+    "priority": 85
+  },
+  "verdict": "approve",
+  "expects": "proposal",
+  "expected": {
+    "proposal_hash": "31779fc673c2ee76aa3a5f23b338e3ed173943c92a042b38b8561dc50e7446ae",
+    "tool_sequence": [
+      "intake_customer_request",
+      "list_active_orders",
+      "get_inventory",
+      "get_machine_capacity",
+      "analyze_shop_blockers",
+      "propose_schedule",
+      "draft_communications"
+    ],
+    "audit_events": [
+      "scenario_initialized",
+      "request_intake",
+      "active_orders_read",
+      "inventory_read",
+      "machine_capacity_read",
+      "blockers_analyzed",
+      "proposal_created",
+      "communications_drafted",
+      "approval_granted",
+      "plan_applied"
+    ],
+    "final_revision": 2,
+    "outcome": "applied"
+  }
+}
