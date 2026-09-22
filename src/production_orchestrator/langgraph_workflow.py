@@ -55,6 +55,7 @@ from production_orchestrator.workflow import ShopService
 
 LANGGRAPH_PROVIDER = "deterministic-langgraph"
 LANGGRAPH_MODEL_ID = "deterministic-workflow-model"
+VOID_ACTOR = "langgraph-apply"
 INTERRUPT_NAME = "production-orchestrator-apply-plan"
 CHECKPOINT_DB = "langgraph_checkpoints.db"
 SHOP_DB = "shop.db"
@@ -535,7 +536,10 @@ def _void_ledger_approval(
     approval whose apply was refused (stale digest, tampered thread) would
     remain the latest decision for the hash and could be applied by another
     consumer once the domain state matched again, with no further human step.
-    Only an approval recorded by THIS thread (matching sequence) is voided.
+    The approved row whose sequence this thread's decision names is voided;
+    the sequence lives in checkpoint state, inside the trust boundary. The
+    void is recorded under a system actor so audit readers can tell it apart
+    from a human rejection; the original approver is kept in the reason.
     """
     decision = state.get("decision")
     proposal_hash = state.get("proposal_hash")
@@ -548,8 +552,8 @@ def _void_ledger_approval(
         proposal_hash=proposal_hash,
         reviewed_hash=latest.reviewed_hash,
         approved=False,
-        actor=latest.actor,
-        reason=f"Voided: apply refused — {error}",
+        actor=VOID_ACTOR,
+        reason=f"Voided: apply refused — {error} (original approver: {latest.actor})",
     )
 
 
