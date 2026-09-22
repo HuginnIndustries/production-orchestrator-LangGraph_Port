@@ -84,6 +84,12 @@ class RuntimeBinding(TypedDict):
     the binding the resuming process was launched with. A mismatch refuses
     the application exactly like a swapped AWS profile does on the Strands
     path.
+
+    Trust boundary: like the Strands hook's configured actor and AWS profile,
+    these values are trusted process configuration, not authentication. The
+    checkpoint database and the CLI flags sit inside the boundary; the checks
+    catch a resume from the wrong process or a misconfigured operator, not a
+    hostile one with write access to the runtime directory.
     """
 
     actor: str
@@ -389,7 +395,19 @@ def build_graph(runtime: GraphRuntime):
             "summary": proposal_summary(state["proposal"]),
         }
         response = interrupt(payload)
-        binding = state.get("binding")
+        # Nothing below may raise on tampered thread state: a raise inside this node
+        # wedges the thread with no audit trail. Normalise first, then decide.
+        binding = _well_formed_binding(state.get("binding"))
+        if not isinstance(proposal_hash, str) or not proposal_hash:
+            runtime.repository.record_audit(
+                event_type="apply_refused",
+                proposal_hash=None,
+                details={
+                    "reason": "thread carries no proposal hash",
+                    "thread_id": state["thread_id"],
+                },
+            )
+            return {"decision": _denied("", "thread carries no proposal hash")}
         decision = _normalize_decision(
             response, proposal_hash, bound_actor=binding["actor"] if binding else None
         )
@@ -440,6 +458,7 @@ def build_graph(runtime: GraphRuntime):
                 proposal_hash=state.get("proposal_hash"),
                 details={"reason": str(error), "thread_id": state["thread_id"]},
             )
+            _void_ledger_approval(runtime, state, error)
             return {"outcome": "refused", "refusal_reason": str(error)}
         return {"outcome": "applied", "applied_revision": applied_revision}
 
@@ -494,6 +513,44 @@ def proposal_summary(proposal: Mapping[str, Any] | None) -> dict[str, Any]:
 
 def canonical_proposal_json(proposal: Mapping[str, Any] | None) -> str:
     return json.dumps(proposal, sort_keys=True, separators=(",", ":"))
+
+
+def _well_formed_binding(value: Any) -> RuntimeBinding | None:
+    """Return the thread's binding only if it has the declared shape."""
+    if not isinstance(value, Mapping):
+        return None
+    if set(value) != {"actor", "provider", "model_id"}:
+        return None
+    if not all(isinstance(value[key], str) for key in ("actor", "provider", "model_id")):
+        return None
+    return {"actor": value["actor"], "provider": value["provider"], "model_id": value["model_id"]}
+
+
+def _void_ledger_approval(
+    runtime: GraphRuntime, state: OrchestratorState, error: Exception
+) -> None:
+    """Supersede an approval this thread recorded but could not apply.
+
+    The ledger is shared with the Strands surface. Without this, a genuine
+    approval whose apply was refused (stale digest, tampered thread) would
+    remain the latest decision for the hash and could be applied by another
+    consumer once the domain state matched again, with no further human step.
+    Only an approval recorded by THIS thread (matching sequence) is voided.
+    """
+    decision = state.get("decision")
+    proposal_hash = state.get("proposal_hash")
+    if not decision or not isinstance(proposal_hash, str) or not proposal_hash:
+        return
+    latest = runtime.repository.latest_decision(proposal_hash)
+    if latest is None or not latest.approved or latest.sequence != decision.get("sequence"):
+        return
+    runtime.repository.record_decision(
+        proposal_hash=proposal_hash,
+        reviewed_hash=latest.reviewed_hash,
+        approved=False,
+        actor=latest.actor,
+        reason=f"Voided: apply refused — {error}",
+    )
 
 
 def _normalize_decision(

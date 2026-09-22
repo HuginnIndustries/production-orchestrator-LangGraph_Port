@@ -9,7 +9,11 @@ from pathlib import Path
 import pytest
 from langgraph.types import Command
 
-from production_orchestrator.approval import ApprovalRequired, apply_production_plan
+from production_orchestrator.approval import (
+    ApprovalRejected,
+    ApprovalRequired,
+    apply_production_plan,
+)
 from production_orchestrator.fixtures import SCENARIOS
 from production_orchestrator.langgraph_workflow import (
     INTERRUPT_NAME,
@@ -415,7 +419,13 @@ def _assert_refused(runtime: GraphRuntime, result: dict, reason: str) -> None:
     assert runtime.repository.load_state().revision == 1
     events = _events(runtime)
     assert "plan_applied" not in events
-    assert events[-1] == "apply_refused"
+    assert "apply_refused" in events
+    # A refused apply never leaves an approved row as the latest ledger decision,
+    # so no other consumer of shop.db can apply it later without a fresh decision.
+    hash_ = result.get("proposal_hash")
+    if isinstance(hash_, str) and hash_:
+        latest = runtime.repository.latest_decision(hash_)
+        assert latest is None or latest.approved is False
 
 
 def test_forged_hash_in_thread_is_refused(runtime: GraphRuntime) -> None:
@@ -582,8 +592,9 @@ def test_apply_node_still_refuses_a_foreign_ledger_approval(runtime: GraphRuntim
     )
     result = runtime.graph.invoke(None, runtime.config(thread_id))
     _assert_refused(runtime, result, "not the decision recorded")
-    # The shared write path, when told who was entitled to decide, refuses the row too.
-    with pytest.raises(ApprovalRequired, match="not from"):
+    # The planted row is voided (its sequence matched the forged decision) and the
+    # shared write path refuses it whether or not it is told the entitled actor.
+    with pytest.raises((ApprovalRequired, ApprovalRejected)):
         apply_production_plan(
             runtime.repository,
             runtime.repository.load_proposal(payload["proposal_hash"]),
@@ -602,6 +613,58 @@ def test_malformed_proposal_payload_in_thread_is_refused_with_audit(
 
     _assert_refused(runtime, result, "malformed")
     assert runtime.graph.get_state(runtime.config(thread_id)).next == ()  # not wedged
+
+
+@pytest.mark.parametrize(
+    "tampered",
+    [
+        {"binding": "attacker"},
+        {"binding": {"provider": "x", "model_id": "y"}},
+        {"binding": ["a"]},
+        {"binding": 7},
+        {"binding": {"actor": 1, "provider": "x", "model_id": "y"}},
+        {"proposal_hash": None},
+    ],
+)
+def test_tampered_gate_inputs_are_denied_with_audit_not_wedged(
+    runtime: GraphRuntime, tampered: dict
+) -> None:
+    thread_id, payload = _start(runtime)
+    runtime.graph.update_state(runtime.config(thread_id), tampered)
+
+    result = runtime.resume(thread_id, approved=True)
+
+    assert result["outcome"] == "rejected"
+    assert result["decision"]["approved"] is False
+    assert runtime.graph.get_state(runtime.config(thread_id)).next == ()
+    events = _events(runtime)
+    assert events[-1] == "approval_rejected" or "apply_refused" in events
+    _assert_ledger_never_approved(runtime.repository, payload["proposal_hash"])
+
+
+def test_refused_apply_voids_the_ledger_approval_for_other_consumers(
+    runtime: GraphRuntime,
+) -> None:
+    """An entitled approval whose apply is refused must not stay approved in shop.db."""
+    thread_id, payload = _start(runtime)
+    hash_ = payload["proposal_hash"]
+    with sqlite3.connect(runtime.repository.path) as connection:
+        (original,) = connection.execute(
+            "SELECT payload FROM shop_state WHERE singleton = 1"
+        ).fetchone()
+        tampered = json.dumps({**json.loads(original), "inventory": {"blank-caps": 999}})
+        connection.execute("UPDATE shop_state SET payload = ? WHERE singleton = 1", (tampered,))
+
+    result = runtime.resume(thread_id, approved=True)
+
+    assert result["outcome"] == "refused"
+    latest = runtime.repository.latest_decision(hash_)
+    assert latest.approved is False and latest.reason.startswith("Voided")
+    with sqlite3.connect(runtime.repository.path) as connection:  # restore the digest
+        connection.execute("UPDATE shop_state SET payload = ? WHERE singleton = 1", (original,))
+    with pytest.raises(RuntimeError):
+        ShopService(runtime.repository).apply_plan(hash_)
+    assert runtime.repository.load_state().revision == 1
 
 
 def test_service_cache_is_keyed_by_scenario(runtime: GraphRuntime) -> None:
