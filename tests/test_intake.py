@@ -29,11 +29,7 @@ def test_valid_extraction_derives_exactly_the_scenario_target_order() -> None:
             catalog=spec.catalog,
             extraction=spec.expected_extraction,
             valid_days=sorted(
-                {
-                    day
-                    for machine in state.machines.values()
-                    for day in machine.daily_capacity
-                }
+                {day for machine in state.machines.values() for day in machine.daily_capacity}
             ),
         )
 
