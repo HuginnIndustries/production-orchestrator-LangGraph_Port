@@ -338,7 +338,9 @@ class GraphRuntime:
 def build_graph(runtime: GraphRuntime):
     def _invoke(state: OrchestratorState, call: PlannedCall) -> ToolCall:
         tools = build_langgraph_tools(runtime.service_for(state["scenario"]))
-        spec_for(call.name)  # unknown tool names fail before any call
+        expected = {parameter.name for parameter in spec_for(call.name).parameters}
+        if set(call.arguments) != expected:
+            raise TypeError(f"{call.name} expects arguments {sorted(expected)}")
         result = tools[call.name].invoke(dict(call.arguments))
         return {"name": call.name, "arguments": dict(call.arguments), "result": result}
 

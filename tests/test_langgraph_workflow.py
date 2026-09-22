@@ -571,7 +571,7 @@ def test_rejection_reason_is_recorded_against_exact_hash(runtime: GraphRuntime) 
     assert "LangGraph" in decision.reason
 
 
-def test_replace_helper_keeps_models_immutable(runtime: GraphRuntime) -> None:
+def test_forged_proposal_cannot_be_persisted_while_thread_is_pending(runtime: GraphRuntime) -> None:
     thread_id, payload = _start(runtime)
     persisted = runtime.repository.load_proposal(payload["proposal_hash"])
     forged = replace(persisted, target_order_id="FORGED")

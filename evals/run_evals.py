@@ -185,6 +185,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rows: list[str] = []
     failures = 0
+    total = 0
     for path, case in load_cases(args.cases):
         strands, langgraph = evaluate(case)
         expected = case.get("expected", {})
@@ -211,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
                 langgraph.as_dict()[field] == expected.get(field) for field in COMPARED_FIELDS
             )
         status = "PASS" if paths_agree and matches_expected else "FAIL"
+        total += 1
         if status == "FAIL":
             failures += 1
         rows.append(
@@ -239,7 +241,6 @@ def main(argv: list[str] | None = None) -> int:
     print("| case | verdict | strands hash | langgraph hash | tools S/L | rev S/L | outcome | ok |")
     print("|---|---|---|---|---|---|---|---|")
     print("\n".join(rows))
-    total = len(rows) if not failures else sum(1 for r in rows if not r.startswith("|  |"))
     print(f"\n{total - failures}/{total} cases agree across Strands and LangGraph.")
     return 1 if failures else 0
 
