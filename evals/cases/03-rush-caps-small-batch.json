@@ -1,0 +1,40 @@
+{
+  "id": "03-rush-caps-small-batch",
+  "scenario": "rush-order",
+  "customer_email": "Subject: small rush\n\nCould you squeeze in 10 red-logo caps today? Booth is tomorrow morning. \u2014 Dana",
+  "extraction": {
+    "order_id": "RUSH-200",
+    "product_code": "embroidered-caps",
+    "quantity": 10,
+    "requested_day": "2026-08-12",
+    "priority": 95
+  },
+  "verdict": "approve",
+  "expects": "proposal",
+  "expected": {
+    "proposal_hash": "6b107306d2745b072fe0c807ec00f7d0f7751900b45fdbd76e6c22911143575b",
+    "tool_sequence": [
+      "intake_customer_request",
+      "list_active_orders",
+      "get_inventory",
+      "get_machine_capacity",
+      "analyze_shop_blockers",
+      "propose_schedule",
+      "draft_communications"
+    ],
+    "audit_events": [
+      "scenario_initialized",
+      "request_intake",
+      "active_orders_read",
+      "inventory_read",
+      "machine_capacity_read",
+      "blockers_analyzed",
+      "proposal_created",
+      "communications_drafted",
+      "approval_granted",
+      "plan_applied"
+    ],
+    "final_revision": 2,
+    "outcome": "applied"
+  }
+}

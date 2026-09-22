@@ -8,12 +8,16 @@ license = "Apache-2.0"
 authors = [{ name = "Production Orchestrator Team" }]
 dependencies = [
     "strands-agents[ollama]==1.51.0",
+    "langgraph==1.2.12",
+    "langgraph-checkpoint-sqlite==3.1.1",
+    "langchain-core==1.6.4",
 ]
 
 [project.scripts]
 production-orchestrator-spike = "production_orchestrator.spike:main"
 production-orchestrator-restart-spike = "production_orchestrator.restart_spike:main"
 production-orchestrator-demo = "production_orchestrator.demo:main"
+production-orchestrator-langgraph-demo = "production_orchestrator.langgraph_demo:main"
 
 [build-system]
 requires = ["hatchling"]

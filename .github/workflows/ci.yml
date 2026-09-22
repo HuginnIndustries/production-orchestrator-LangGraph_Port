@@ -21,4 +21,6 @@ jobs:
       - run: uv export --locked --no-dev --no-emit-project --output-file /tmp/requirements.txt
       - run: uvx pip-audit -r /tmp/requirements.txt
       - run: uv run ruff check .
+      - run: uv run ruff format --check .
       - run: uv run pytest --cov=production_orchestrator --cov-report=term-missing --cov-fail-under=70
+      - run: uv run python evals/run_evals.py

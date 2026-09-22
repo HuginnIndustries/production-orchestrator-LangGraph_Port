@@ -30,7 +30,15 @@ class ApprovalResult:
 def apply_production_plan(
     repository: SQLiteShopRepository,
     proposal: ProductionPlan,
+    *,
+    expected_actor: str | None = None,
 ) -> ApprovalResult:
+    """Apply the exact reviewed proposal once, or refuse before any mutation.
+
+    ``expected_actor`` optionally binds the write to the identity that was
+    entitled to decide: a ledger row from any other actor is refused even if
+    it is approved. Callers that manage identity elsewhere may omit it.
+    """
     calculated_hash = calculate_production_plan_hash(proposal)
     expected_id = f"plan-{calculated_hash[:12]}"
     if calculated_hash != proposal.content_hash or proposal.proposal_id != expected_id:
@@ -43,6 +51,8 @@ def apply_production_plan(
         raise ProposalIntegrityError("Approval does not bind to the exact proposal hash")
     if not decision.approved:
         raise ApprovalRejected(f"Proposal {proposal.content_hash} was rejected")
+    if expected_actor is not None and decision.actor != expected_actor:
+        raise ApprovalRequired(f"Decision for {proposal.content_hash} is not from {expected_actor}")
     try:
         applied_revision = repository.apply_approved_plan(proposal)
     except StaleStateError as error:

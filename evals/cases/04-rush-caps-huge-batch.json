@@ -1,0 +1,20 @@
+{
+  "id": "04-rush-caps-huge-batch",
+  "scenario": "rush-order",
+  "customer_email": "Subject: big rush\n\nWe need 120 embroidered caps with the red logo today. Rush fee is fine. \u2014 Dana",
+  "extraction": {
+    "order_id": "RUSH-200",
+    "product_code": "embroidered-caps",
+    "quantity": 120,
+    "requested_day": "2026-08-12",
+    "priority": 100
+  },
+  "verdict": "reject",
+  "expects": "fail_closed",
+  "expected": {
+    "proposal_hash": null,
+    "final_revision": 1,
+    "proposal_created": false,
+    "plan_applied": false
+  }
+}

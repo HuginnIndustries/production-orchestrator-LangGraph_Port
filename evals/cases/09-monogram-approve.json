@@ -1,0 +1,40 @@
+{
+  "id": "09-monogram-approve",
+  "scenario": "metallic-monogram",
+  "customer_email": "Subject: Executive gala tonight\n\nWe have 25 blazers that need the gold metallic monogram before the executive gala this evening. The board will be wearing them on stage, so quality matters more than anything. Can you fit us in today? \u2014 Priya, Meridian Partners",
+  "extraction": {
+    "order_id": "GOLD-500",
+    "product_code": "gold-monogram-blazers",
+    "quantity": 25,
+    "requested_day": "2026-08-12",
+    "priority": 80
+  },
+  "verdict": "approve",
+  "expects": "proposal",
+  "expected": {
+    "proposal_hash": "02a8890051a0c7f89963fcc8a8c819c6bb888678a21409b4f448ac38e7d21bc7",
+    "tool_sequence": [
+      "intake_customer_request",
+      "list_active_orders",
+      "get_inventory",
+      "get_machine_capacity",
+      "analyze_shop_blockers",
+      "propose_schedule",
+      "draft_communications"
+    ],
+    "audit_events": [
+      "scenario_initialized",
+      "request_intake",
+      "active_orders_read",
+      "inventory_read",
+      "machine_capacity_read",
+      "blockers_analyzed",
+      "proposal_created",
+      "communications_drafted",
+      "approval_granted",
+      "plan_applied"
+    ],
+    "final_revision": 2,
+    "outcome": "applied"
+  }
+}

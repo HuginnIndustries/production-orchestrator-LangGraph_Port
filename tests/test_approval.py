@@ -155,6 +155,32 @@ def test_approval_for_a_different_reviewed_hash_is_denied(tmp_path) -> None:
     assert repository.domain_digest() == before
 
 
+def test_approval_from_a_different_actor_is_denied_when_actor_is_expected(tmp_path) -> None:
+    repository = SQLiteShopRepository(
+        tmp_path / "shop.db",
+        clock=lambda: "2026-08-11T18:00:00Z",
+    )
+    repository.initialize(rush_order_scenario())
+    proposal = create_production_plan(repository.load_state(), "RUSH-200")
+    repository.save_proposal(proposal)
+    repository.record_decision(
+        proposal_hash=proposal.content_hash,
+        reviewed_hash=proposal.content_hash,
+        approved=True,
+        actor="mallory",
+        reason="Approved by someone else",
+    )
+    before = repository.domain_digest()
+
+    with pytest.raises(ApprovalRequired, match="not from operator@example.test"):
+        apply_production_plan(repository, proposal, expected_actor="operator@example.test")
+
+    assert repository.domain_digest() == before
+    assert repository.load_state().revision == 1
+    # Callers that do not bind an actor keep the pre-existing behaviour.
+    assert apply_production_plan(repository, proposal).applied_revision == 2
+
+
 def test_state_update_rolls_back_if_audit_append_fails(tmp_path) -> None:
     repository = SQLiteShopRepository(
         tmp_path / "shop.db",

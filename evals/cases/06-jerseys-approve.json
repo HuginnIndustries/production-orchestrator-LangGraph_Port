@@ -1,0 +1,40 @@
+{
+  "id": "06-jerseys-approve",
+  "scenario": "team-jerseys",
+  "customer_email": "Subject: We made the finals!!\n\nThe squad made the championship game \u2014 35 jerseys with the navy crest, and we need them today so the team has them for tomorrow's final. Priority job, whatever it takes. \u2014 Coach Rivera, Northside FC",
+  "extraction": {
+    "order_id": "JERSEY-310",
+    "product_code": "team-jerseys",
+    "quantity": 35,
+    "requested_day": "2026-08-12",
+    "priority": 90
+  },
+  "verdict": "approve",
+  "expects": "proposal",
+  "expected": {
+    "proposal_hash": "906b770faaa8822f579ebe01a1f17621129964065d59aab01b257e01ad73958d",
+    "tool_sequence": [
+      "intake_customer_request",
+      "list_active_orders",
+      "get_inventory",
+      "get_machine_capacity",
+      "analyze_shop_blockers",
+      "propose_schedule",
+      "draft_communications"
+    ],
+    "audit_events": [
+      "scenario_initialized",
+      "request_intake",
+      "active_orders_read",
+      "inventory_read",
+      "machine_capacity_read",
+      "blockers_analyzed",
+      "proposal_created",
+      "communications_drafted",
+      "approval_granted",
+      "plan_applied"
+    ],
+    "final_revision": 2,
+    "outcome": "applied"
+  }
+}

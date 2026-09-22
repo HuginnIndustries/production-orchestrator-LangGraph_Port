@@ -28,6 +28,7 @@ class ApprovalDecision:
     actor: str
     reason: str
     created_at: str
+    sequence: int | None = None
 
 
 @dataclass(frozen=True)
@@ -164,11 +165,12 @@ class SQLiteShopRepository:
         approved: bool,
         actor: str,
         reason: str,
-    ) -> None:
+    ) -> int:
+        """Record a decision and return its ledger sequence (row identity)."""
         created_at = self.clock()
         event_type = "approval_granted" if approved else "approval_rejected"
         with self._connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO approval_decisions(
                     proposal_hash, reviewed_hash, approved, actor, reason, created_at
@@ -176,6 +178,7 @@ class SQLiteShopRepository:
                 """,
                 (proposal_hash, reviewed_hash, int(approved), actor, reason, created_at),
             )
+            sequence = int(cursor.lastrowid or 0)
             self._append_audit(
                 connection,
                 event_type=event_type,
@@ -186,6 +189,7 @@ class SQLiteShopRepository:
                     "reviewed_hash": reviewed_hash,
                 },
             )
+        return sequence
 
     def record_audit(
         self,
@@ -206,7 +210,7 @@ class SQLiteShopRepository:
         with self._connect() as connection:
             row = connection.execute(
                 """
-                SELECT proposal_hash, reviewed_hash, approved, actor, reason, created_at
+                SELECT sequence, proposal_hash, reviewed_hash, approved, actor, reason, created_at
                 FROM approval_decisions
                 WHERE proposal_hash = ?
                 ORDER BY sequence DESC
@@ -223,6 +227,7 @@ class SQLiteShopRepository:
             actor=row["actor"],
             reason=row["reason"],
             created_at=row["created_at"],
+            sequence=int(row["sequence"]),
         )
 
     def save_proposal(self, proposal: ProductionPlan) -> None:
@@ -413,7 +418,11 @@ def _encode_proposal(proposal: ProductionPlan) -> str:
 
 
 def _decode_proposal(payload: str) -> ProductionPlan:
-    data = json.loads(payload)
+    return proposal_from_payload(json.loads(payload))
+
+
+def proposal_from_payload(data: dict) -> ProductionPlan:
+    """Rebuild a proposal from its canonical dictionary form (``dataclasses.asdict``)."""
     return ProductionPlan(
         proposal_id=data["proposal_id"],
         content_hash=data["content_hash"],

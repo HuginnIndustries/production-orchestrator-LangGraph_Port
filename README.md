@@ -49,6 +49,18 @@ This is a real Strands tool workflow, not a chat interface wrapped around determ
 
 The model chooses and sequences tools, but deterministic code validates all extracted shop facts, calculates blockers and quantities, binds approval to canonical proposal content, and enforces the write gate. That division keeps agent reasoning useful without asking the model to enforce its own permissions.
 
+## LangGraph implementation
+
+The same governed loop also exists as a LangGraph `StateGraph` in [`langgraph_workflow.py`](src/production_orchestrator/langgraph_workflow.py): the same eight tools bound from the shared [`tool_specs.py`](src/production_orchestrator/tool_specs.py), the same `ShopService`, planner, and `approval.apply_production_plan`, with the human pause expressed as `langgraph.types.interrupt()` inside an `approval_gate` node and the thread persisted by `SqliteSaver` next to the shop database. Rejection routes to a terminal node without entering `apply`; the apply node re-runs the hash, revision, replay, identity, and provider-binding checks before the single write.
+
+```bash
+uv run production-orchestrator-langgraph-demo start --runtime-dir data/lg/run1
+uv run production-orchestrator-langgraph-demo decide --runtime-dir data/lg/run1 --thread <THREAD_ID> --approve
+uv run python evals/run_evals.py   # both paths must agree on every golden case
+```
+
+Read [`docs/LANGGRAPH_PORT.md`](docs/LANGGRAPH_PORT.md) for the side-by-side, what is shared, what differs, and the known gaps. The LangGraph path runs offline only and is not part of the hackathon submission evidence.
+
 ## Problem
 
 Small production shops coordinate due dates, customer approvals, material availability, machine compatibility, operator capacity, and customer communication. A rush order can force several connected decisions, and the cost of missing one is rework, a late delivery, or an avoidable customer escalation.

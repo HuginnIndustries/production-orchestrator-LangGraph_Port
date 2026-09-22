@@ -1,0 +1,40 @@
+{
+  "id": "11-monogram-dozen",
+  "scenario": "metallic-monogram",
+  "customer_email": "Subject: gala\n\nA dozen blazers need the gold monogram before tonight. \u2014 Priya",
+  "extraction": {
+    "order_id": "GOLD-500",
+    "product_code": "gold-monogram-blazers",
+    "quantity": 12,
+    "requested_day": "2026-08-12",
+    "priority": 70
+  },
+  "verdict": "approve",
+  "expects": "proposal",
+  "expected": {
+    "proposal_hash": "8290eb437ec2cdbc0b3864ae574828b53ca48620f5677c1935efefc4af64b465",
+    "tool_sequence": [
+      "intake_customer_request",
+      "list_active_orders",
+      "get_inventory",
+      "get_machine_capacity",
+      "analyze_shop_blockers",
+      "propose_schedule",
+      "draft_communications"
+    ],
+    "audit_events": [
+      "scenario_initialized",
+      "request_intake",
+      "active_orders_read",
+      "inventory_read",
+      "machine_capacity_read",
+      "blockers_analyzed",
+      "proposal_created",
+      "communications_drafted",
+      "approval_granted",
+      "plan_applied"
+    ],
+    "final_revision": 2,
+    "outcome": "applied"
+  }
+}
