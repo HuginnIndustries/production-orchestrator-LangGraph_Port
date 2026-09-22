@@ -10,6 +10,7 @@ from production_orchestrator.intake import CatalogItem, RequestExtraction, valid
 from production_orchestrator.models import ProductionPlan
 from production_orchestrator.persistence import SQLiteShopRepository
 from production_orchestrator.planning import analyze_blockers, create_production_plan
+from production_orchestrator.tool_specs import bind_shop_tools, tool_names_for
 
 
 class ShopService:
@@ -240,20 +241,22 @@ class ProductionPlanApprovalHook(HookProvider):
 
 
 def build_strands_tools(service: ShopService) -> list[Any]:
+    bound = bind_shop_tools(service)
+
     @tool
     def list_active_orders() -> dict[str, object]:
         """List active orders with exact priorities, due dates, requirements, and durations."""
-        return service.list_active_orders()
+        return bound["list_active_orders"]()
 
     @tool
     def get_inventory() -> dict[str, object]:
         """Return exact synthetic material availability for the current state revision."""
-        return service.get_inventory()
+        return bound["get_inventory"]()
 
     @tool
     def get_machine_capacity() -> dict[str, object]:
         """Return exact machine capabilities, capacities, and scheduled commitments."""
-        return service.get_machine_capacity()
+        return bound["get_machine_capacity"]()
 
     @tool
     def analyze_shop_blockers(target_order_id: str) -> dict[str, object]:
@@ -262,7 +265,7 @@ def build_strands_tools(service: ShopService) -> list[Any]:
         Args:
             target_order_id: Exact order identifier to analyze.
         """
-        return service.analyze_shop_blockers(target_order_id)
+        return bound["analyze_shop_blockers"](target_order_id=target_order_id)
 
     @tool
     def propose_schedule(target_order_id: str) -> dict[str, object]:
@@ -271,7 +274,7 @@ def build_strands_tools(service: ShopService) -> list[Any]:
         Args:
             target_order_id: Exact order identifier to schedule.
         """
-        return service.propose_schedule(target_order_id)
+        return bound["propose_schedule"](target_order_id=target_order_id)
 
     @tool
     def draft_communications(proposal_hash: str) -> dict[str, object]:
@@ -280,7 +283,7 @@ def build_strands_tools(service: ShopService) -> list[Any]:
         Args:
             proposal_hash: Immutable hash returned by propose_schedule.
         """
-        return service.draft_communications(proposal_hash)
+        return bound["draft_communications"](proposal_hash=proposal_hash)
 
     @tool
     def apply_production_plan(proposal_hash: str) -> dict[str, object]:
@@ -289,7 +292,7 @@ def build_strands_tools(service: ShopService) -> list[Any]:
         Args:
             proposal_hash: Immutable hash returned by propose_schedule.
         """
-        return service.apply_plan(proposal_hash)
+        return bound["apply_production_plan"](proposal_hash=proposal_hash)
 
     @tool
     def intake_customer_request(
@@ -308,7 +311,7 @@ def build_strands_tools(service: ShopService) -> list[Any]:
             requested_day: Requested completion day (YYYY-MM-DD).
             priority: Urgency from 1 (lowest) to 100 (highest rush).
         """
-        return service.intake_customer_request(
+        return bound["intake_customer_request"](
             order_id=order_id,
             product_code=product_code,
             quantity=quantity,
@@ -316,15 +319,14 @@ def build_strands_tools(service: ShopService) -> list[Any]:
             priority=priority,
         )
 
-    tools = [
-        list_active_orders,
-        get_inventory,
-        get_machine_capacity,
-        analyze_shop_blockers,
-        propose_schedule,
-        draft_communications,
-        apply_production_plan,
-    ]
-    if service.catalog is not None:
-        tools.insert(0, intake_customer_request)
-    return tools
+    strands_tools = {
+        "intake_customer_request": intake_customer_request,
+        "list_active_orders": list_active_orders,
+        "get_inventory": get_inventory,
+        "get_machine_capacity": get_machine_capacity,
+        "analyze_shop_blockers": analyze_shop_blockers,
+        "propose_schedule": propose_schedule,
+        "draft_communications": draft_communications,
+        "apply_production_plan": apply_production_plan,
+    }
+    return [strands_tools[name] for name in tool_names_for(service)]
