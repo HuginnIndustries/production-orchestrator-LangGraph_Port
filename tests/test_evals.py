@@ -56,7 +56,7 @@ def test_harness_exits_non_zero_on_a_mismatch(tmp_path: Path) -> None:
 
     assert result.returncode == 1
     assert "| FAIL |" in result.stdout
-    assert "0/1 cases agree" in result.stdout
+    assert "0/1 cases agree across" in result.stdout
 
 
 def test_harness_exits_zero_on_the_committed_golden_set() -> None:

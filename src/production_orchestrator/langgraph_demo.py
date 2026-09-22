@@ -78,11 +78,15 @@ def decide(args: argparse.Namespace) -> dict[str, object]:
             raise SystemExit(2) from error
         state = runtime.repository.load_state()
         audit = [event.event_type for event in runtime.repository.audit_events()]
+        recorded = result.get("decision") or {}
+        denied_at_gate = approved and recorded.get("approved") is False
         report = {
             "thread_id": args.thread,
             "decision": "approve" if approved else "reject",
             "outcome": result.get("outcome"),
-            "refusal_reason": result.get("refusal_reason"),
+            "refusal_reason": (
+                recorded.get("reason") if denied_at_gate else result.get("refusal_reason")
+            ),
             "proposal_hash": pending["proposal_hash"],
             "final_state_revision": state.revision,
             "plan_applied_count": audit.count("plan_applied"),
@@ -98,7 +102,7 @@ def decide(args: argparse.Namespace) -> dict[str, object]:
     print(f"OUTCOME={report['outcome']}")
     print(f"FINAL_STATE_REVISION={state.revision}")
     print(f"PLAN_APPLIED_COUNT={report['plan_applied_count']}")
-    if report["outcome"] == "refused":
+    if report["outcome"] == "refused" or denied_at_gate:
         print(f"REASON={report['refusal_reason']}")
         raise SystemExit(2)
     return report

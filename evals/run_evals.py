@@ -186,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     rows: list[str] = []
     failures = 0
     total = 0
+    fail_closed_total = 0
     for path, case in load_cases(args.cases):
         strands, langgraph = evaluate(case)
         expected = case.get("expected", {})
@@ -213,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         status = "PASS" if paths_agree and matches_expected else "FAIL"
         total += 1
+        fail_closed_total += case.get("expects") == "fail_closed"
         if status == "FAIL":
             failures += 1
         rows.append(
@@ -241,7 +243,12 @@ def main(argv: list[str] | None = None) -> int:
     print("| case | verdict | strands hash | langgraph hash | tools S/L | rev S/L | outcome | ok |")
     print("|---|---|---|---|---|---|---|---|")
     print("\n".join(rows))
-    print(f"\n{total - failures}/{total} cases agree across Strands and LangGraph.")
+    full = total - fail_closed_total
+    print(
+        f"\n{total - failures}/{total} cases agree across Strands and LangGraph "
+        f"({full} full-parity: hash + tool sequence + audit + revision + outcome; "
+        f"{fail_closed_total} fail-closed: no proposal, no write, revision unchanged)."
+    )
     return 1 if failures else 0
 
 

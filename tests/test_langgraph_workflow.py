@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from langgraph.types import Command
 
+from production_orchestrator.approval import ApprovalRequired, apply_production_plan
 from production_orchestrator.fixtures import SCENARIOS
 from production_orchestrator.langgraph_workflow import (
     INTERRUPT_NAME,
@@ -104,10 +105,16 @@ def test_planner_never_schedules_apply_and_reads_hash_from_tool_result() -> None
     assert planner.next_call("plan", {**state, "tool_calls": []}).name == "propose_schedule"
 
 
-def test_planner_requires_a_scenario_with_an_extraction() -> None:
+def test_planner_requires_a_scenario_with_an_extraction(monkeypatch) -> None:
     with pytest.raises(KeyError):
         planner_for_scenario("nope")
     assert isinstance(planner_for_scenario("team-jerseys"), DeterministicToolPlanner)
+    spec = SCENARIOS["team-jerseys"]
+    monkeypatch.setitem(
+        SCENARIOS, "no-extraction", replace(spec, name="no-extraction", expected_extraction=None)
+    )
+    with pytest.raises(ValueError, match="no deterministic extraction"):
+        planner_for_scenario("no-extraction")
 
 
 # --------------------------------------------------------------------------- happy paths
@@ -183,14 +190,22 @@ def test_every_scenario_reaches_interrupt_and_applies(tmp_path: Path, scenario: 
         runtime.close()
 
 
-def test_string_resume_values_are_accepted_like_strands(runtime: GraphRuntime) -> None:
-    thread_id, _ = _start(runtime)
-    result = runtime.graph.invoke(
-        Command(resume="n"),
-        runtime.config(thread_id),
-    )
-    assert result["outcome"] == "rejected"
-    assert result["decision"]["actor"] == "unknown"
+@pytest.mark.parametrize(
+    ("value", "outcome", "revision"),
+    [("y", "applied", 2), ("yes", "applied", 2), ("n", "rejected", 1), ("nope", "rejected", 1)],
+)
+def test_string_resume_values_behave_like_strands_interrupt_response(
+    runtime: GraphRuntime, value: str, outcome: str, revision: int
+) -> None:
+    """A bare string carries no actor, so it is attributed to the bound actor."""
+    thread_id, payload = _start(runtime)
+
+    result = runtime.graph.invoke(Command(resume=value), runtime.config(thread_id))
+
+    assert result["outcome"] == outcome
+    assert result["decision"]["actor"] == ACTOR
+    assert runtime.repository.load_state().revision == revision
+    assert runtime.repository.latest_decision(payload["proposal_hash"]).actor == ACTOR
 
 
 # --------------------------------------------------------------------------- persistence
@@ -332,9 +347,11 @@ def test_cli_refuses_a_swapped_actor_before_mutation(tmp_path: Path) -> None:
         check=False,
     )
     assert result.returncode == 2
-    assert "OUTCOME=refused" in result.stdout
+    assert "OUTCOME=rejected" in result.stdout
+    assert "REASON=Denied by default: thread binding" in result.stdout
     repository = SQLiteShopRepository(tmp_path / "shop.db", clock=lambda: "t")
     assert repository.load_state().revision == 1
+    _assert_ledger_never_approved(repository, started["PROPOSAL_HASH"])
 
 
 def test_cli_refuses_a_swapped_provider_binding(tmp_path: Path) -> None:
@@ -351,12 +368,44 @@ def test_cli_refuses_a_swapped_provider_binding(tmp_path: Path) -> None:
         check=False,
     )
     assert result.returncode == 2
-    assert "binding does not match" in result.stdout
+    assert "OUTCOME=rejected" in result.stdout
+    assert "REASON=Denied by default: thread binding" in result.stdout
     repository = SQLiteShopRepository(tmp_path / "shop.db", clock=lambda: "t")
     assert repository.load_state().revision == 1
+    _assert_ledger_never_approved(repository, started["PROPOSAL_HASH"])
 
 
 # --------------------------------------------------------------------------- integrity refusals
+
+
+def _assert_ledger_never_approved(repository: SQLiteShopRepository, proposal_hash: str) -> None:
+    """The shared approval ledger must hold no approved row for this hash.
+
+    A poisoned ``approved=1`` row would be a valid approval for the Strands
+    surface sharing the same shop.db, so a foreign actor or process must be
+    denied at the gate, before the ledger write — not merely refused afterwards.
+    """
+    with sqlite3.connect(repository.path) as connection:
+        approved_rows = connection.execute(
+            "SELECT COUNT(*) FROM approval_decisions WHERE proposal_hash = ? AND approved = 1",
+            (proposal_hash,),
+        ).fetchone()[0]
+    assert approved_rows == 0
+    events = [event.event_type for event in repository.audit_events()]
+    assert "approval_granted" not in events
+    assert "plan_applied" not in events
+    # And the Strands write path cannot be driven off the ledger either.
+    with pytest.raises(RuntimeError):
+        ShopService(repository).apply_plan(proposal_hash)
+    assert repository.load_state().revision == 1
+
+
+def _assert_denied_at_gate(runtime: GraphRuntime, result: dict, reason: str, hash_: str) -> None:
+    assert result["outcome"] == "rejected", result
+    assert result["decision"]["approved"] is False
+    assert reason in result["decision"]["reason"]
+    assert result["applied_revision"] is None
+    _assert_ledger_never_approved(runtime.repository, hash_)
 
 
 def _assert_refused(runtime: GraphRuntime, result: dict, reason: str) -> None:
@@ -408,7 +457,7 @@ def test_thread_proposal_differing_from_persisted_is_refused(runtime: GraphRunti
 
     result = runtime.resume(thread_id, approved=True)
 
-    _assert_refused(runtime, result, "integrity")
+    _assert_refused(runtime, result, "Persisted proposal integrity validation failed")
 
 
 def test_stale_revision_is_refused(runtime: GraphRuntime) -> None:
@@ -481,34 +530,86 @@ def test_double_approve_on_same_thread_is_refused(runtime: GraphRuntime) -> None
     assert runtime.repository.load_state().revision == 2
 
 
-def test_wrong_actor_is_refused(runtime: GraphRuntime) -> None:
-    thread_id, _ = _start(runtime)
+def test_wrong_actor_is_denied_at_the_gate_and_never_poisons_the_ledger(
+    runtime: GraphRuntime,
+) -> None:
+    thread_id, payload = _start(runtime)
     result = runtime.resume(thread_id, approved=True, actor="mallory")
-    _assert_refused(runtime, result, "actor does not match")
-    assert _events(runtime)[-2] == "approval_granted"  # recorded, but never applied
+    _assert_denied_at_gate(runtime, result, "actor does not match", payload["proposal_hash"])
+    recorded = runtime.repository.latest_decision(payload["proposal_hash"])
+    assert recorded.actor == "mallory" and recorded.approved is False  # audited, denied
 
 
-def test_wrong_provider_binding_is_refused(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "swap", [{"provider": "bedrock-workflow"}, {"model_id": "amazon.nova-lite-v1:0"}]
+)
+def test_wrong_binding_is_denied_at_the_gate_and_never_poisons_the_ledger(
+    tmp_path: Path, swap: dict
+) -> None:
     first = GraphRuntime(tmp_path, BINDING, planner=planner_for_scenario("rush-order"))
-    thread_id, _ = _start(first)
+    thread_id, payload = _start(first)
     first.close()
-    swapped = _fresh(tmp_path, {**BINDING, "provider": "bedrock-workflow"})
+    swapped = _fresh(tmp_path, {**BINDING, **swap})
     try:
         result = swapped.resume(thread_id, approved=True)
-        _assert_refused(swapped, result, "binding does not match")
+        _assert_denied_at_gate(swapped, result, "binding does not match", payload["proposal_hash"])
     finally:
         swapped.close()
 
 
-def test_wrong_model_binding_is_refused(tmp_path: Path) -> None:
-    first = GraphRuntime(tmp_path, BINDING, planner=planner_for_scenario("rush-order"))
-    thread_id, _ = _start(first)
-    first.close()
-    swapped = _fresh(tmp_path, {**BINDING, "model_id": "amazon.nova-lite-v1:0"})
-    try:
-        _assert_refused(swapped, swapped.resume(thread_id, approved=True), "binding")
-    finally:
-        swapped.close()
+def test_apply_node_still_refuses_a_foreign_ledger_approval(runtime: GraphRuntime) -> None:
+    """Defence in depth: a mallory row written outside the graph never satisfies apply."""
+    thread_id, payload = _start(runtime)
+    runtime.repository.record_decision(
+        proposal_hash=payload["proposal_hash"],
+        reviewed_hash=payload["proposal_hash"],
+        approved=True,
+        actor="mallory",
+        reason="planted",
+    )
+    runtime.graph.update_state(
+        runtime.config(thread_id),
+        {
+            "decision": {
+                "approved": True,
+                "actor": ACTOR,
+                "reviewed_hash": payload["proposal_hash"],
+                "reason": "Approved through LangGraph interrupt",
+                "sequence": 1,
+            }
+        },
+        as_node="approval_gate",
+    )
+    result = runtime.graph.invoke(None, runtime.config(thread_id))
+    _assert_refused(runtime, result, "not the decision recorded")
+    # The shared write path, when told who was entitled to decide, refuses the row too.
+    with pytest.raises(ApprovalRequired, match="not from"):
+        apply_production_plan(
+            runtime.repository,
+            runtime.repository.load_proposal(payload["proposal_hash"]),
+            expected_actor=ACTOR,
+        )
+    assert runtime.repository.load_state().revision == 1
+
+
+def test_malformed_proposal_payload_in_thread_is_refused_with_audit(
+    runtime: GraphRuntime,
+) -> None:
+    thread_id, _ = _start(runtime)
+    runtime.graph.update_state(runtime.config(thread_id), {"proposal": {"bogus": 1}})
+
+    result = runtime.resume(thread_id, approved=True)
+
+    _assert_refused(runtime, result, "malformed")
+    assert runtime.graph.get_state(runtime.config(thread_id)).next == ()  # not wedged
+
+
+def test_service_cache_is_keyed_by_scenario(runtime: GraphRuntime) -> None:
+    a = runtime.service_for("rush-order")
+    b = runtime.service_for("team-jerseys")
+    assert a is runtime.service_for("rush-order")
+    assert a is not b
+    assert set(b.catalog) == {"team-jerseys"}
 
 
 def test_approval_for_a_different_reviewed_hash_is_refused(runtime: GraphRuntime) -> None:
@@ -571,10 +672,10 @@ def test_rejection_reason_is_recorded_against_exact_hash(runtime: GraphRuntime) 
     assert "LangGraph" in decision.reason
 
 
-def test_forged_proposal_cannot_be_persisted_while_thread_is_pending(runtime: GraphRuntime) -> None:
+def test_decision_sequence_binds_apply_to_the_exact_ledger_row(runtime: GraphRuntime) -> None:
+    """Two value-identical approvals are different rows; apply must name the right one."""
     thread_id, payload = _start(runtime)
-    persisted = runtime.repository.load_proposal(payload["proposal_hash"])
-    forged = replace(persisted, target_order_id="FORGED")
-    with pytest.raises(ValueError, match="integrity"):
-        runtime.repository.save_proposal(forged)
-    assert runtime.pending_interrupt(thread_id) is not None
+    result = runtime.resume(thread_id, approved=True)
+    latest = runtime.repository.latest_decision(payload["proposal_hash"])
+    assert result["decision"]["sequence"] == latest.sequence
+    assert isinstance(latest.sequence, int)

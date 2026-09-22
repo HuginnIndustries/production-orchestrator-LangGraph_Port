@@ -159,12 +159,16 @@ def spec_for(name: str) -> ToolSpec:
     raise KeyError(f"Unknown tool: {name}")
 
 
+def validate_arguments(name: str, arguments: Mapping[str, Any]) -> None:
+    """Refuse a call whose argument names differ from the tool's declared parameters."""
+    expected = {parameter.name for parameter in spec_for(name).parameters}
+    if set(arguments) != expected:
+        raise TypeError(f"{name} expects arguments {sorted(expected)}, got {sorted(arguments)}")
+
+
 def invoke_tool(
     bound: Mapping[str, Callable[..., dict[str, object]]], name: str, arguments: Mapping[str, Any]
 ) -> dict[str, object]:
     """Invoke a bound tool with validated argument names."""
-    spec = spec_for(name)
-    expected = {parameter.name for parameter in spec.parameters}
-    if set(arguments) != expected:
-        raise TypeError(f"{name} expects arguments {sorted(expected)}, got {sorted(arguments)}")
+    validate_arguments(name, arguments)
     return bound[name](**arguments)

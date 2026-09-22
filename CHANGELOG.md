@@ -32,5 +32,9 @@ All notable changes to this project are documented here. The format follows
   names, descriptions, argument schemas, ordering, and catalog gating are
   unchanged.
 - `persistence.proposal_from_payload` is exposed for rebuilding a proposal from
-  its canonical dictionary form.
+  its canonical dictionary form; `record_decision` returns the ledger row
+  sequence and `ApprovalDecision` carries it.
+- `approval.apply_production_plan` accepts an optional `expected_actor` and
+  refuses an approval recorded by any other actor. Existing callers are
+  unchanged.
 - CI now also runs `ruff format --check` and the eval harness.

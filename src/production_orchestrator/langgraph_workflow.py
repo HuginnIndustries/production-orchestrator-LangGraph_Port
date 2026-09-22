@@ -49,7 +49,7 @@ from production_orchestrator.tool_specs import (
     TOOL_SPECS,
     ToolSpec,
     bind_shop_tools,
-    spec_for,
+    validate_arguments,
 )
 from production_orchestrator.workflow import ShopService
 
@@ -96,6 +96,7 @@ class Decision(TypedDict):
     actor: str
     reviewed_hash: str
     reason: str
+    sequence: int | None
 
 
 class OrchestratorState(TypedDict, total=False):
@@ -228,20 +229,24 @@ class GraphRuntime:
         self.runtime_dir = Path(self.runtime_dir)
         self.runtime_dir.mkdir(parents=True, exist_ok=True)
         self.repository = SQLiteShopRepository(self.runtime_dir / SHOP_DB, clock=self.clock)
+        # Single-writer by design: one process resumes a thread at a time. The busy
+        # timeout turns a concurrent decide into a wait or a clean error, not a crash.
         self._connection = sqlite3.connect(
-            self.runtime_dir / CHECKPOINT_DB, check_same_thread=False
+            self.runtime_dir / CHECKPOINT_DB, check_same_thread=False, timeout=30
         )
         self.checkpointer = SqliteSaver(self._connection)
-        self._service: ShopService | None = None
+        self._services: dict[str, ShopService] = {}
         self.graph = build_graph(self)
 
     def close(self) -> None:
         self._connection.close()
 
     def service_for(self, scenario: str) -> ShopService:
-        if self._service is None:
-            self._service = ShopService(self.repository, catalog=SCENARIOS[scenario].catalog)
-        return self._service
+        if scenario not in self._services:
+            self._services[scenario] = ShopService(
+                self.repository, catalog=SCENARIOS[scenario].catalog
+            )
+        return self._services[scenario]
 
     @staticmethod
     def config(thread_id: str) -> RunnableConfig:
@@ -266,7 +271,7 @@ class GraphRuntime:
                 "customer_email": spec.customer_email,
                 "catalog_codes": sorted(spec.catalog),
             },
-            "binding": dict(self.binding),  # type: ignore[typeddict-item]
+            "binding": self.binding,
             "tool_calls": [],
             "proposal": None,
             "proposal_hash": None,
@@ -338,9 +343,7 @@ class GraphRuntime:
 def build_graph(runtime: GraphRuntime):
     def _invoke(state: OrchestratorState, call: PlannedCall) -> ToolCall:
         tools = build_langgraph_tools(runtime.service_for(state["scenario"]))
-        expected = {parameter.name for parameter in spec_for(call.name).parameters}
-        if set(call.arguments) != expected:
-            raise TypeError(f"{call.name} expects arguments {sorted(expected)}")
+        validate_arguments(call.name, call.arguments)
         result = tools[call.name].invoke(dict(call.arguments))
         return {"name": call.name, "arguments": dict(call.arguments), "result": result}
 
@@ -386,15 +389,34 @@ def build_graph(runtime: GraphRuntime):
             "summary": proposal_summary(state["proposal"]),
         }
         response = interrupt(payload)
-        decision = _normalize_decision(response, proposal_hash)
-        runtime.repository.record_decision(
+        binding = state.get("binding")
+        decision = _normalize_decision(
+            response, proposal_hash, bound_actor=binding["actor"] if binding else None
+        )
+        # Identity and provider binding are verified BEFORE the ledger write. The
+        # approval_decisions table is shared with the Strands surface, so an approval
+        # from a foreign actor or a foreign process must never land there as
+        # approved=1 — it would be a valid approval for every other consumer.
+        if binding is None or dict(binding) != dict(runtime.binding):
+            decision = _denied(
+                proposal_hash,
+                "thread binding does not match the resuming process configuration",
+                actor=decision["actor"],
+            )
+        elif decision["actor"] != binding["actor"]:
+            decision = _denied(
+                proposal_hash,
+                "decision actor does not match the thread's bound actor",
+                actor=decision["actor"],
+            )
+        sequence = runtime.repository.record_decision(
             proposal_hash=proposal_hash,
             reviewed_hash=decision["reviewed_hash"],
             approved=decision["approved"],
             actor=decision["actor"],
             reason=decision["reason"],
         )
-        return {"decision": decision}
+        return {"decision": {**decision, "sequence": sequence}}
 
     def route_decision(state: OrchestratorState) -> str:
         decision = state.get("decision")
@@ -409,6 +431,8 @@ def build_graph(runtime: GraphRuntime):
             ApprovalRequired,
             ProposalIntegrityError,
             StaleProposal,
+            KeyError,
+            TypeError,
             ValueError,
         ) as error:
             runtime.repository.record_audit(
@@ -472,21 +496,28 @@ def canonical_proposal_json(proposal: Mapping[str, Any] | None) -> str:
     return json.dumps(proposal, sort_keys=True, separators=(",", ":"))
 
 
-def _normalize_decision(response: Any, proposal_hash: str) -> Decision:
+def _normalize_decision(
+    response: Any, proposal_hash: str, *, bound_actor: str | None = None
+) -> Decision:
     """Turn whatever came back through ``Command(resume=...)`` into a decision.
 
     Missing or malformed input defaults to denial, exactly like the Strands
     hook treats any string other than an explicit yes. Raising here would
     leave the thread wedged on the bad resume value, so a malformed value is
     recorded as a rejection and the loop ends without a write.
+
+    A bare string ("y"/"n") mirrors the Strands ``interruptResponse``: it
+    carries no actor, so — like the Strands hook recording its configured
+    actor — it is attributed to the thread's bound actor.
     """
     if isinstance(response, str):
         approved = response.strip().lower() in {"y", "yes", "approve", "approved"}
         return {
             "approved": approved,
-            "actor": "unknown",
+            "actor": bound_actor or "unknown",
             "reviewed_hash": proposal_hash,
             "reason": _reason(approved),
+            "sequence": None,
         }
     if not isinstance(response, Mapping):
         return _denied(proposal_hash, "malformed resume value")
@@ -502,15 +533,17 @@ def _normalize_decision(response: Any, proposal_hash: str) -> Decision:
         "actor": actor,
         "reviewed_hash": reviewed_hash,
         "reason": _reason(approved),
+        "sequence": None,
     }
 
 
-def _denied(proposal_hash: str, why: str) -> Decision:
+def _denied(proposal_hash: str, why: str, *, actor: str = "unknown") -> Decision:
     return {
         "approved": False,
-        "actor": "unknown",
+        "actor": actor,
         "reviewed_hash": proposal_hash,
         "reason": f"Denied by default: {why}",
+        "sequence": None,
     }
 
 
@@ -542,8 +575,12 @@ def _verify_and_apply(runtime: GraphRuntime, state: OrchestratorState) -> int:
         raise ProposalIntegrityError("Thread carries no proposal to apply")
 
     # 1. Hash: the proposal content in the thread must still hash to the claimed hash,
-    #    and the persisted proposal under that hash must be byte-identical to it.
-    proposal = proposal_from_payload(dict(proposal_payload))
+    #    and the persisted proposal under that hash must equal it. (load_proposal already
+    #    re-derives the hash of the stored row, so the equality is defence in depth.)
+    try:
+        proposal = proposal_from_payload(dict(proposal_payload))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ProposalIntegrityError("Thread proposal payload is malformed") from error
     if calculate_production_plan_hash(proposal) != claimed_hash or proposal.content_hash != (
         claimed_hash
     ):
@@ -552,8 +589,8 @@ def _verify_and_apply(runtime: GraphRuntime, state: OrchestratorState) -> int:
     if persisted is None or persisted != proposal:
         raise ProposalIntegrityError("Thread proposal does not match the persisted proposal")
 
-    # 2. Identity and provider binding: the deciding actor and the resuming process must
-    #    both match what the thread was started with.
+    # 2. Identity and provider binding: re-checked here as defence in depth; the gate
+    #    already refused to record an approval that fails either of these.
     binding = state.get("binding")
     if binding is None or dict(binding) != dict(runtime.binding):
         raise ApplyRefused("Thread binding does not match the resuming process configuration")
@@ -564,14 +601,15 @@ def _verify_and_apply(runtime: GraphRuntime, state: OrchestratorState) -> int:
     if decision["reviewed_hash"] != claimed_hash:
         raise ProposalIntegrityError("Approval does not bind to the exact proposal hash")
 
-    # 4. Not replayed: the persisted decision must be the one this gate just recorded, and
-    #    the plan must not have been applied already.
+    # 4. Not replayed: the latest persisted decision must be the exact ledger row this
+    #    gate wrote (by sequence, not by value), and the plan must not be applied already.
     latest = repository.latest_decision(claimed_hash)
     if (
         latest is None
+        or decision.get("sequence") is None
+        or latest.sequence != decision["sequence"]
         or latest.reviewed_hash != decision["reviewed_hash"]
         or latest.actor != decision["actor"]
-        or latest.reason != decision["reason"]
         or not latest.approved
     ):
         raise ApplyRefused("Persisted decision is not the decision recorded by this thread")
@@ -592,4 +630,6 @@ def _verify_and_apply(runtime: GraphRuntime, state: OrchestratorState) -> int:
     if repository.domain_digest() != state.get("proposal_digest"):
         raise StaleProposal("Domain state changed after the proposal was cut")
 
-    return apply_production_plan(repository, persisted).applied_revision
+    return apply_production_plan(
+        repository, persisted, expected_actor=binding["actor"]
+    ).applied_revision
