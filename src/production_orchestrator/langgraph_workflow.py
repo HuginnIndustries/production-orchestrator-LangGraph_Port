@@ -287,14 +287,30 @@ class GraphRuntime:
         return {"thread_id": thread_id, "interrupt": payload}
 
     def pending_interrupt(self, thread_id: str) -> dict[str, Any] | None:
-        """The interrupt a fresh process sees for this thread, or ``None``."""
+        """The interrupt a fresh process sees for this thread, or ``None``.
+
+        A thread is pending exactly when ``approval_gate`` is its next node. The
+        payload is read from the checkpointed interrupt when present; after a
+        manual ``update_state`` the task has not re-raised yet, so the same
+        payload is rebuilt from the thread's persisted proposal fields.
+        """
         snapshot = self.graph.get_state(self.config(thread_id))
-        if not snapshot.values or "approval_gate" not in tuple(snapshot.next):
+        if not snapshot.values:
             return None
         for task in snapshot.tasks:
+            if task.name != "approval_gate":
+                continue
             for pending in getattr(task, "interrupts", ()):
                 return dict(pending.value)
-        return None
+        if "approval_gate" not in tuple(snapshot.next):
+            return None
+        values = snapshot.values
+        return {
+            "name": INTERRUPT_NAME,
+            "proposal_hash": values.get("proposal_hash"),
+            "proposal": canonical_proposal_json(values.get("proposal")),
+            "summary": None,
+        }
 
     def resume(
         self,
@@ -361,16 +377,15 @@ def build_graph(runtime: GraphRuntime):
 
     def approval_gate(state: OrchestratorState) -> dict[str, Any]:
         proposal_hash = state["proposal_hash"]
-        service = runtime.service_for(state["scenario"])
         payload = {
             "name": INTERRUPT_NAME,
             "proposal_hash": proposal_hash,
             "proposal": canonical_proposal_json(state["proposal"]),
-            "summary": service.proposal_summary(proposal_hash),
+            "summary": proposal_summary(state["proposal"]),
         }
         response = interrupt(payload)
         decision = _normalize_decision(response, proposal_hash)
-        service.repository.record_decision(
+        runtime.repository.record_decision(
             proposal_hash=proposal_hash,
             reviewed_hash=decision["reviewed_hash"],
             approved=decision["approved"],
@@ -437,11 +452,32 @@ def build_graph(runtime: GraphRuntime):
 # --------------------------------------------------------------------------- integrity
 
 
+def proposal_summary(proposal: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The reviewer-facing summary; the same fields ``ShopService.proposal_summary`` shows."""
+    if not isinstance(proposal, Mapping):
+        return {}
+    return {
+        "proposal_id": proposal.get("proposal_id"),
+        "proposal_hash": proposal.get("content_hash"),
+        "base_revision": proposal.get("base_revision"),
+        "target_order_id": proposal.get("target_order_id"),
+        "schedule_changes": list(proposal.get("schedule_changes", [])),
+        "procurement_actions": list(proposal.get("procurement_actions", [])),
+    }
+
+
 def canonical_proposal_json(proposal: Mapping[str, Any] | None) -> str:
     return json.dumps(proposal, sort_keys=True, separators=(",", ":"))
 
 
 def _normalize_decision(response: Any, proposal_hash: str) -> Decision:
+    """Turn whatever came back through ``Command(resume=...)`` into a decision.
+
+    Missing or malformed input defaults to denial, exactly like the Strands
+    hook treats any string other than an explicit yes. Raising here would
+    leave the thread wedged on the bad resume value, so a malformed value is
+    recorded as a rejection and the loop ends without a write.
+    """
     if isinstance(response, str):
         approved = response.strip().lower() in {"y", "yes", "approve", "approved"}
         return {
@@ -451,19 +487,28 @@ def _normalize_decision(response: Any, proposal_hash: str) -> Decision:
             "reason": _reason(approved),
         }
     if not isinstance(response, Mapping):
-        raise TypeError("Resume value must be a decision mapping")
-    approved = bool(response.get("approved", False))
+        return _denied(proposal_hash, "malformed resume value")
     actor = response.get("actor")
     reviewed_hash = response.get("reviewed_hash")
     if not isinstance(actor, str) or not actor:
-        raise TypeError("Resume value must name the deciding actor")
+        return _denied(proposal_hash, "resume value did not name the deciding actor")
     if not isinstance(reviewed_hash, str) or not reviewed_hash:
-        raise TypeError("Resume value must name the reviewed proposal hash")
+        return _denied(proposal_hash, "resume value did not name the reviewed hash")
+    approved = response.get("approved") is True
     return {
         "approved": approved,
         "actor": actor,
         "reviewed_hash": reviewed_hash,
         "reason": _reason(approved),
+    }
+
+
+def _denied(proposal_hash: str, why: str) -> Decision:
+    return {
+        "approved": False,
+        "actor": "unknown",
+        "reviewed_hash": proposal_hash,
+        "reason": f"Denied by default: {why}",
     }
 
 
